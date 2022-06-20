@@ -43,15 +43,13 @@ class MACAddressField(models.Field):
         try:
             return EUI(value, version=48, dialect=mac_unix_expanded_uppercase)
         except AddrFormatError as e:
-            raise ValidationError("Invalid MAC address format: {}".format(value))
+            raise ValidationError(f"Invalid MAC address format: {value}")
 
     def db_type(self, connection):
         return 'macaddr'
 
     def get_prep_value(self, value):
-        if not value:
-            return None
-        return str(self.to_python(value))
+        return str(self.to_python(value)) if value else None
 
 
 class PathField(ArrayField):

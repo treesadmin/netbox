@@ -41,10 +41,11 @@ class ContentTypePermissionRequiredMixin(AccessMixin):
         return False
 
     def dispatch(self, request, *args, **kwargs):
-        if not self.has_permission():
-            return self.handle_no_permission()
-
-        return super().dispatch(request, *args, **kwargs)
+        return (
+            super().dispatch(request, *args, **kwargs)
+            if self.has_permission()
+            else self.handle_no_permission()
+        )
 
 
 class ObjectPermissionRequiredMixin(AccessMixin):
@@ -83,9 +84,9 @@ class ObjectPermissionRequiredMixin(AccessMixin):
 
         if not hasattr(self, 'queryset'):
             raise ImproperlyConfigured(
-                '{} has no queryset defined. ObjectPermissionRequiredMixin may only be used on views which define '
-                'a base queryset'.format(self.__class__.__name__)
+                f'{self.__class__.__name__} has no queryset defined. ObjectPermissionRequiredMixin may only be used on views which define a base queryset'
             )
+
 
         if not self.has_permission():
             return self.handle_no_permission()

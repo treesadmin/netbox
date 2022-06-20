@@ -161,7 +161,7 @@ class APISelect(SelectWithDisabled):
         self.static_params: Dict[str, List[str]] = {}
 
         if api_url:
-            self.attrs['data-url'] = '/{}{}'.format(settings.BASE_PATH, api_url.lstrip('/'))  # Inject BASE_PATH
+            self.attrs['data-url'] = f"/{settings.BASE_PATH}{api_url.lstrip('/')}"
 
     def __deepcopy__(self, memo):
         """Reset `static_params` and `dynamic_params` when APISelect is deepcopied."""
@@ -187,31 +187,29 @@ class APISelect(SelectWithDisabled):
                 value = 'null'
 
         # Check type of `value` again, since it may have changed.
-        if isinstance(value, str):
-            if value.startswith('$'):
-                # A value starting with `$` indicates a dynamic query param, where the
-                # initial value is unknown and will be updated at the JavaScript layer
-                # as the related form field's value changes.
-                field_name = value.strip('$')
-                self.dynamic_params[field_name] = key
-            else:
-                # A value _not_ starting with `$` indicates a static query param, where
-                # the value is already known and should not be changed at the JavaScript
-                # layer.
-                if key in self.static_params:
-                    current = self.static_params[key]
-                    self.static_params[key] = [v for v in set([*current, value])]
-                else:
-                    self.static_params[key] = [value]
+        if (
+            isinstance(value, str)
+            and not value.startswith('$')
+            and key in self.static_params
+            or not isinstance(value, str)
+            and key in self.static_params
+        ):
+            current = self.static_params[key]
+            self.static_params[key] = list({*current, value})
+        elif (
+            isinstance(value, str)
+            and not value.startswith('$')
+            and key not in self.static_params
+            or not isinstance(value, str)
+            and key not in self.static_params
+        ):
+            self.static_params[key] = [value]
         else:
-            # Any non-string values are passed through as static query params, since
-            # dynamic query param values have to be a string (in order to start with
-            # `$`).
-            if key in self.static_params:
-                current = self.static_params[key]
-                self.static_params[key] = [v for v in set([*current, value])]
-            else:
-                self.static_params[key] = [value]
+            # A value starting with `$` indicates a dynamic query param, where the
+            # initial value is unknown and will be updated at the JavaScript layer
+            # as the related form field's value changes.
+            field_name = value.strip('$')
+            self.dynamic_params[field_name] = key
 
     def _process_query_params(self, query_params: QueryParam) -> None:
         """
@@ -245,8 +243,8 @@ class APISelect(SelectWithDisabled):
         Convert post-processed dynamic query params to data structure expected by front-
         end, serialize the value to JSON, and add it to the widget attributes.
         """
-        key = 'data-dynamic-params'
         if len(self.dynamic_params) > 0:
+            key = 'data-dynamic-params'
             try:
                 update = [{'fieldName': f, 'queryParam': q} for (f, q) in self.dynamic_params.items()]
                 self._serialize_params(key, update)
@@ -258,8 +256,8 @@ class APISelect(SelectWithDisabled):
         Convert post-processed static query params to data structure expected by front-
         end, serialize the value to JSON, and add it to the widget attributes.
         """
-        key = 'data-static-params'
         if len(self.static_params) > 0:
+            key = 'data-static-params'
             try:
                 update = [{'queryParam': k, 'queryValue': v} for (k, v) in self.static_params.items()]
                 self._serialize_params(key, update)

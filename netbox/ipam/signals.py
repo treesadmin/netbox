@@ -56,9 +56,9 @@ def clear_primary_ip(instance, **kwargs):
     was a primary IP.
     """
     field_name = f'primary_ip{instance.family}'
-    device = Device.objects.filter(**{field_name: instance}).first()
-    if device:
+    if device := Device.objects.filter(**{field_name: instance}).first():
         device.save()
-    virtualmachine = VirtualMachine.objects.filter(**{field_name: instance}).first()
-    if virtualmachine:
+    if virtualmachine := VirtualMachine.objects.filter(
+        **{field_name: instance}
+    ).first():
         virtualmachine.save()

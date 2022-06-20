@@ -98,12 +98,14 @@ class WritableNestedSerializer(BaseModelSerializer):
                 return queryset.get(**params)
             except ObjectDoesNotExist:
                 raise ValidationError(
-                    "Related object not found using the provided attributes: {}".format(params)
+                    f"Related object not found using the provided attributes: {params}"
                 )
+
             except MultipleObjectsReturned:
                 raise ValidationError(
-                    "Multiple objects match the provided attributes: {}".format(params)
+                    f"Multiple objects match the provided attributes: {params}"
                 )
+
             except FieldError as e:
                 raise ValidationError(e)
 
@@ -116,9 +118,9 @@ class WritableNestedSerializer(BaseModelSerializer):
                 pk = int(data)
             except (TypeError, ValueError):
                 raise ValidationError(
-                    "Related objects must be referenced by numeric ID or by dictionary of attributes. Received an "
-                    "unrecognized value: {}".format(data)
+                    f"Related objects must be referenced by numeric ID or by dictionary of attributes. Received an unrecognized value: {data}"
                 )
+
 
         # Look up object by PK
         queryset = self.Meta.model.objects
@@ -126,7 +128,7 @@ class WritableNestedSerializer(BaseModelSerializer):
             return queryset.get(pk=int(data))
         except ObjectDoesNotExist:
             raise ValidationError(
-                "Related object not found using the provided numeric ID: {}".format(pk)
+                f"Related object not found using the provided numeric ID: {pk}"
             )
 
 

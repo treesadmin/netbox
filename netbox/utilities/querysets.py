@@ -20,13 +20,11 @@ class RestrictedQuerySet(QuerySet):
 
         # Bypass restriction for superusers and exempt views
         if user.is_superuser or permission_is_exempt(permission_required):
-            qs = self
+            return self
 
-        # User is anonymous or has not been granted the requisite permission
         elif not user.is_authenticated or permission_required not in user.get_all_permissions():
-            qs = self.none()
+            return self.none()
 
-        # Filter the queryset to include only objects with allowed attributes
         else:
             attrs = Q()
             for perm_attrs in user._object_perm_cache[permission_required]:
@@ -39,6 +37,4 @@ class RestrictedQuerySet(QuerySet):
                     # Any permission with null constraints grants access to _all_ instances
                     attrs = Q()
                     break
-            qs = self.filter(attrs)
-
-        return qs
+            return self.filter(attrs)

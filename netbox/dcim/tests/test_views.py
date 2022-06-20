@@ -585,7 +585,7 @@ device-bays:
         self.add_permissions('dcim.view_devicetype')
 
         # Test default YAML export
-        response = self.client.get('{}?export'.format(url))
+        response = self.client.get(f'{url}?export')
         self.assertEqual(response.status_code, 200)
         data = list(yaml.load_all(response.content, Loader=yaml.SafeLoader))
         self.assertEqual(len(data), 3)
@@ -830,10 +830,9 @@ class FrontPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
             'device_type': devicetype.pk,
             'name_pattern': 'Front Port [4-6]',
             'type': PortTypeChoices.TYPE_8P8C,
-            'rear_port_set': [
-                '{}:1'.format(rp.pk) for rp in rearports[3:6]
-            ],
+            'rear_port_set': [f'{rp.pk}:1' for rp in rearports[3:6]],
         }
+
 
         cls.bulk_edit_data = {
             'type': PortTypeChoices.TYPE_8P8C,
@@ -1562,12 +1561,11 @@ class FrontPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
             'device': device.pk,
             'name_pattern': 'Front Port [4-6]',
             'type': PortTypeChoices.TYPE_8P8C,
-            'rear_port_set': [
-                '{}:1'.format(rp.pk) for rp in rearports[3:6]
-            ],
+            'rear_port_set': [f'{rp.pk}:1' for rp in rearports[3:6]],
             'description': 'New description',
             'tags': [t.pk for t in tags],
         }
+
 
         cls.bulk_edit_data = {
             'type': PortTypeChoices.TYPE_8P8C,

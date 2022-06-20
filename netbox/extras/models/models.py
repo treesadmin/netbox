@@ -309,7 +309,7 @@ class ExportTemplate(ChangeLoggedModel):
         Render the template to an HTTP response, delivered as a named file attachment
         """
         output = self.render(queryset)
-        mime_type = 'text/plain' if not self.mime_type else self.mime_type
+        mime_type = self.mime_type or 'text/plain'
 
         # Build the response
         response = HttpResponse(output, content_type=mime_type)

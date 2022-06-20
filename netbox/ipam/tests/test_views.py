@@ -391,11 +391,12 @@ class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         }
 
         cls.csv_data = (
-            f"name,slug,scope_type,scope_id,description",
-            f"VLAN Group 4,vlan-group-4,,,Fourth VLAN group",
+            "name,slug,scope_type,scope_id,description",
+            "VLAN Group 4,vlan-group-4,,,Fourth VLAN group",
             f"VLAN Group 5,vlan-group-5,dcim.site,{sites[0].pk},Fifth VLAN group",
             f"VLAN Group 6,vlan-group-6,dcim.site,{sites[1].pk},Sixth VLAN group",
         )
+
 
         cls.bulk_edit_data = {
             'description': 'New description',

@@ -225,13 +225,19 @@ class PrefixLengthSerializer(serializers.Serializer):
 
         prefix = self.context.get('prefix')
         if prefix.family == 4 and requested_prefix > 32:
-            raise serializers.ValidationError({
-                'prefix_length': 'Invalid prefix length ({}) for IPv4'.format((requested_prefix))
-            })
+            raise serializers.ValidationError(
+                {
+                    'prefix_length': f'Invalid prefix length ({requested_prefix}) for IPv4'
+                }
+            )
+
         elif prefix.family == 6 and requested_prefix > 128:
-            raise serializers.ValidationError({
-                'prefix_length': 'Invalid prefix length ({}) for IPv6'.format((requested_prefix))
-            })
+            raise serializers.ValidationError(
+                {
+                    'prefix_length': f'Invalid prefix length ({requested_prefix}) for IPv6'
+                }
+            )
+
         return data
 
 

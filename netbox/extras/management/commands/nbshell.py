@@ -63,9 +63,7 @@ class Command(BaseCommand):
         namespace['User'] = User
 
         # Load convenience commands
-        namespace.update({
-            'lsmodels': self._lsmodels,
-        })
+        namespace['lsmodels'] = self._lsmodels
 
         return namespace
 
@@ -75,5 +73,4 @@ class Command(BaseCommand):
             exec(options['command'], self.get_namespace())
             return
 
-        shell = code.interact(banner=BANNER_TEXT, local=self.get_namespace())
-        return shell
+        return code.interact(banner=BANNER_TEXT, local=self.get_namespace())

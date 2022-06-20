@@ -86,12 +86,10 @@ def _handle_deleted_object(request, webhook_queue, sender, instance, **kwargs):
     if not hasattr(instance, 'to_objectchange'):
         return
 
-    # Record an ObjectChange if applicable
-    if hasattr(instance, 'to_objectchange'):
-        objectchange = instance.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)
-        objectchange.user = request.user
-        objectchange.request_id = request.id
-        objectchange.save()
+    objectchange = instance.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)
+    objectchange.user = request.user
+    objectchange.request_id = request.id
+    objectchange.save()
 
     # Enqueue webhooks
     enqueue_object(webhook_queue, instance, request.user, request.id, ObjectChangeActionChoices.ACTION_DELETE)

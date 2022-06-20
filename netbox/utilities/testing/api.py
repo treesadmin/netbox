@@ -456,15 +456,13 @@ class APIViewTestCases:
                 else:
                     fields_string += f'{field_name}\n'
 
-            query = f"""
+            return f"""
             {{
                 {name}{filter_string} {{
                     {fields_string}
                 }}
             }}
             """
-
-            return query
 
         @override_settings(LOGIN_REQUIRED=True)
         def test_graphql_get_object(self):

@@ -429,13 +429,14 @@ class ConfigContextTestCase(TestCase, ChangeLoggedFilterSetTests):
         )
         Tenant.objects.bulk_create(tenants)
 
-        for i in range(0, 3):
+        for i in range(3):
             is_active = bool(i % 2)
             c = ConfigContext.objects.create(
-                name='Config Context {}'.format(i + 1),
+                name=f'Config Context {i + 1}',
                 is_active=is_active,
-                data='{"foo": 123}'
+                data='{"foo": 123}',
             )
+
             c.regions.set([regions[i]])
             c.site_groups.set([site_groups[i]])
             c.sites.set([sites[i]])

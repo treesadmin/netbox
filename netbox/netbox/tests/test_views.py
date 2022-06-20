@@ -20,5 +20,5 @@ class HomeViewTestCase(TestCase):
             'q': 'foo',
         }
 
-        response = self.client.get('{}?{}'.format(url, urllib.parse.urlencode(params)))
+        response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
         self.assertHttpStatus(response, 200)

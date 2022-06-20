@@ -31,16 +31,16 @@ def process_webhook(webhook, model_name, event, data, snapshots, timestamp, user
         'Content-Type': webhook.http_content_type,
     }
     try:
-        headers.update(webhook.render_headers(context))
+        headers |= webhook.render_headers(context)
     except (TemplateError, ValueError) as e:
-        logger.error("Error parsing HTTP headers for webhook {}: {}".format(webhook, e))
+        logger.error(f"Error parsing HTTP headers for webhook {webhook}: {e}")
         raise e
 
     # Render the request body
     try:
         body = webhook.render_body(context)
     except TemplateError as e:
-        logger.error("Error rendering request body for webhook {}: {}".format(webhook, e))
+        logger.error(f"Error rendering request body for webhook {webhook}: {e}")
         raise e
 
     # Prepare the HTTP request
@@ -51,15 +51,14 @@ def process_webhook(webhook, model_name, event, data, snapshots, timestamp, user
         'data': body.encode('utf8'),
     }
     logger.info(
-        "Sending {} request to {} ({} {})".format(
-            params['method'], params['url'], context['model'], context['event']
-        )
+        f"Sending {params['method']} request to {params['url']} ({context['model']} {context['event']})"
     )
+
     logger.debug(params)
     try:
         prepared_request = requests.Request(**params).prepare()
     except requests.exceptions.RequestException as e:
-        logger.error("Error forming HTTP request: {}".format(e))
+        logger.error(f"Error forming HTTP request: {e}")
         raise e
 
     # If a secret key is defined, sign the request with a hash of the key and its content
@@ -68,18 +67,18 @@ def process_webhook(webhook, model_name, event, data, snapshots, timestamp, user
 
     # Send the request
     with requests.Session() as session:
-        session.verify = webhook.ssl_verification
-        if webhook.ca_file_path:
-            session.verify = webhook.ca_file_path
+        session.verify = webhook.ca_file_path or webhook.ssl_verification
         response = session.send(prepared_request, proxies=settings.HTTP_PROXIES)
 
     if 200 <= response.status_code <= 299:
-        logger.info("Request succeeded; response status {}".format(response.status_code))
-        return 'Status {} returned, webhook successfully processed.'.format(response.status_code)
+        logger.info(f"Request succeeded; response status {response.status_code}")
+        return f'Status {response.status_code} returned, webhook successfully processed.'
+
     else:
-        logger.warning("Request failed; response status {}: {}".format(response.status_code, response.content))
+        logger.warning(
+            f"Request failed; response status {response.status_code}: {response.content}"
+        )
+
         raise requests.exceptions.RequestException(
-            "Status {} returned with content '{}', webhook FAILED to process.".format(
-                response.status_code, response.content
-            )
+            f"Status {response.status_code} returned with content '{response.content}', webhook FAILED to process."
         )

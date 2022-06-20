@@ -29,7 +29,7 @@ def parse_numeric_range(string, base=10):
       '0-3,5' => [0, 1, 2, 3, 5]
       '2,8-b,d,f' => [2, 8, 9, a, b, d, f]
     """
-    values = list()
+    values = []
     for dash_range in string.split(','):
         try:
             begin, end = dash_range.split('-')
@@ -55,24 +55,24 @@ def parse_alphanumeric_range(string):
             begin, end = dash_range.split('-')
             vals = begin + end
             # Break out of loop if there's an invalid pattern to return an error
-            if (not (vals.isdigit() or vals.isalpha())) or (vals.isalpha() and not (vals.isupper() or vals.islower())):
+            if (
+                not vals.isdigit()
+                and not vals.isalpha()
+                or vals.isalpha()
+                and not vals.isupper()
+                and not vals.islower()
+            ):
                 return []
         except ValueError:
             begin, end = dash_range, dash_range
         if begin.isdigit() and end.isdigit():
-            for n in list(range(int(begin), int(end) + 1)):
-                values.append(n)
+            values.extend(iter(list(range(int(begin), int(end) + 1))))
+        elif begin == end:
+            values.append(begin)
+        elif len(begin) == len(end) == 1:
+            values.extend(chr(n) for n in list(range(ord(begin), ord(end) + 1)))
         else:
-            # Value-based
-            if begin == end:
-                values.append(begin)
-            # Range-based
-            else:
-                # Not a valid range (more than a single character)
-                if not len(begin) == len(end) == 1:
-                    raise forms.ValidationError(f'Range "{dash_range}" is invalid.')
-                for n in list(range(ord(begin), ord(end) + 1)):
-                    values.append(chr(n))
+            raise forms.ValidationError(f'Range "{dash_range}" is invalid.')
     return values
 
 
@@ -85,9 +85,9 @@ def expand_alphanumeric_pattern(string):
     for i in parsed_range:
         if re.search(ALPHANUMERIC_EXPANSION_PATTERN, remnant):
             for string in expand_alphanumeric_pattern(remnant):
-                yield "{}{}{}".format(lead, i, string)
+                yield f"{lead}{i}{string}"
         else:
-            yield "{}{}{}".format(lead, i, remnant)
+            yield f"{lead}{i}{remnant}"
 
 
 def expand_ipaddress_pattern(string, family):
@@ -97,7 +97,7 @@ def expand_ipaddress_pattern(string, family):
       '2001:db8:0:[0,fd-ff]::/64' => ['2001:db8:0:0::/64', '2001:db8:0:fd::/64', ... '2001:db8:0:ff::/64']
     """
     if family not in [4, 6]:
-        raise Exception("Invalid IP address family: {}".format(family))
+        raise Exception(f"Invalid IP address family: {family}")
     if family == 4:
         regex = IP4_EXPANSION_PATTERN
         base = 10
@@ -143,11 +143,12 @@ def get_selected_values(form, field_name):
             label for value, label in choices if str(value) in filter_data or None in filter_data
         ]
 
-    if hasattr(field, 'null_option'):
-        # If the field has a `null_option` attribute set and it is selected,
-        # add it to the field's grouped choices.
-        if field.null_option is not None and None in filter_data:
-            values.append(field.null_option)
+    if (
+        hasattr(field, 'null_option')
+        and field.null_option is not None
+        and None in filter_data
+    ):
+        values.append(field.null_option)
 
     return values
 

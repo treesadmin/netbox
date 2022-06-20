@@ -53,10 +53,9 @@ class Command(BaseCommand):
 
                     for test_name, attrs in job_result.data.items():
                         self.stdout.write(
-                            "\t{}: {} success, {} info, {} warning, {} failure".format(
-                                test_name, attrs['success'], attrs['info'], attrs['warning'], attrs['failure']
-                            )
+                            f"\t{test_name}: {attrs['success']} success, {attrs['info']} info, {attrs['warning']} warning, {attrs['failure']} failure"
                         )
+
                     self.stdout.write(
                         "[{:%H:%M:%S}] {}: {}".format(timezone.now(), report.full_name, status)
                     )

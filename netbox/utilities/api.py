@@ -69,7 +69,7 @@ def get_view_name(view, suffix=None):
         name = formatting.camelcase_to_spaces(name)
 
     if suffix:
-        name += ' ' + suffix
+        name += f' {suffix}'
 
     return name
 

@@ -56,9 +56,7 @@ class ComponentTemplateModel(ChangeLoggedModel):
         abstract = True
 
     def __str__(self):
-        if self.label:
-            return f"{self.name} ({self.label})"
-        return self.name
+        return f"{self.name} ({self.label})" if self.label else self.name
 
     def instantiate(self, device):
         """
@@ -164,11 +162,14 @@ class PowerPortTemplate(ComponentTemplateModel):
     def clean(self):
         super().clean()
 
-        if self.maximum_draw is not None and self.allocated_draw is not None:
-            if self.allocated_draw > self.maximum_draw:
-                raise ValidationError({
-                    'allocated_draw': f"Allocated draw cannot exceed the maximum draw ({self.maximum_draw}W)."
-                })
+        if (
+            self.maximum_draw is not None
+            and self.allocated_draw is not None
+            and self.allocated_draw > self.maximum_draw
+        ):
+            raise ValidationError({
+                'allocated_draw': f"Allocated draw cannot exceed the maximum draw ({self.maximum_draw}W)."
+            })
 
 
 @extras_features('webhooks')
@@ -205,7 +206,7 @@ class PowerOutletTemplate(ComponentTemplateModel):
         # Validate power port assignment
         if self.power_port and self.power_port.device_type != self.device_type:
             raise ValidationError(
-                "Parent power port ({}) must belong to the same device type".format(self.power_port)
+                f"Parent power port ({self.power_port}) must belong to the same device type"
             )
 
     def instantiate(self, device):
@@ -298,16 +299,16 @@ class FrontPortTemplate(ComponentTemplateModel):
             # Validate rear port assignment
             if self.rear_port.device_type != self.device_type:
                 raise ValidationError(
-                    "Rear port ({}) must belong to the same device type".format(self.rear_port)
+                    f"Rear port ({self.rear_port}) must belong to the same device type"
                 )
+
 
             # Validate rear port position assignment
             if self.rear_port_position > self.rear_port.positions:
                 raise ValidationError(
-                    "Invalid rear port position ({}); rear port {} has only {} positions".format(
-                        self.rear_port_position, self.rear_port.name, self.rear_port.positions
-                    )
+                    f"Invalid rear port position ({self.rear_port_position}); rear port {self.rear_port.name} has only {self.rear_port.positions} positions"
                 )
+
 
         except RearPortTemplate.DoesNotExist:
             pass

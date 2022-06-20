@@ -46,12 +46,10 @@ def get_device_by_name_or_pk(name):
     """
     Attempt to retrieve a device by either its name or primary key ('{pk}').
     """
-    if re.match(DEVICE_BY_PK_RE, name):
-        pk = name.strip('{}')
-        device = Device.objects.get(pk=pk)
-    else:
-        device = Device.objects.get(name=name)
-    return device
+    if not re.match(DEVICE_BY_PK_RE, name):
+        return Device.objects.get(name=name)
+    pk = name.strip('{}')
+    return Device.objects.get(pk=pk)
 
 
 class DeviceComponentFilterForm(BootstrapMixin, CustomFieldModelFilterForm):
@@ -137,16 +135,14 @@ class InterfaceCommonForm(forms.Form):
                 'mode': "An access interface cannot have tagged VLANs assigned."
             })
 
-        # Remove all tagged VLAN assignments from "tagged all" interfaces
         elif self.cleaned_data['mode'] == InterfaceModeChoices.MODE_TAGGED_ALL:
             self.cleaned_data['tagged_vlans'] = []
 
-        # Validate tagged VLANs; must be a global VLAN or in the same site
         elif self.cleaned_data['mode'] == InterfaceModeChoices.MODE_TAGGED and tagged_vlans:
             valid_sites = [None, self.cleaned_data[parent_field].site]
-            invalid_vlans = [str(v) for v in tagged_vlans if v.site not in valid_sites]
-
-            if invalid_vlans:
+            if invalid_vlans := [
+                str(v) for v in tagged_vlans if v.site not in valid_sites
+            ]:
                 raise forms.ValidationError({
                     'tagged_vlans': f"The tagged VLANs ({', '.join(invalid_vlans)}) must belong to the same site as "
                                     f"the interface's parent device/VM, or they must be global"
@@ -1794,11 +1790,12 @@ class FrontPortTemplateCreateForm(ComponentTemplateCreateForm):
         choices = []
         rear_ports = RearPortTemplate.objects.filter(device_type=device_type)
         for rear_port in rear_ports:
-            for i in range(1, rear_port.positions + 1):
-                if (rear_port.pk, i) not in occupied_port_positions:
-                    choices.append(
-                        ('{}:{}'.format(rear_port.pk, i), '{}:{}'.format(rear_port.name, i))
-                    )
+            choices.extend(
+                (f'{rear_port.pk}:{i}', f'{rear_port.name}:{i}')
+                for i in range(1, rear_port.positions + 1)
+                if (rear_port.pk, i) not in occupied_port_positions
+            )
+
         self.fields['rear_port_set'].choices = choices
 
     def clean(self):
@@ -1808,10 +1805,11 @@ class FrontPortTemplateCreateForm(ComponentTemplateCreateForm):
         front_port_count = len(self.cleaned_data['name_pattern'])
         rear_port_count = len(self.cleaned_data['rear_port_set'])
         if front_port_count != rear_port_count:
-            raise forms.ValidationError({
-                'rear_port_set': 'The provided name pattern will create {} ports, however {} rear port assignments '
-                                 'were selected. These counts must match.'.format(front_port_count, rear_port_count)
-            })
+            raise forms.ValidationError(
+                {
+                    'rear_port_set': f'The provided name pattern will create {front_port_count} ports, however {rear_port_count} rear port assignments were selected. These counts must match.'
+                }
+            )
 
     def get_iterative_data(self, iteration):
 
@@ -2325,25 +2323,29 @@ class DeviceForm(BootstrapMixin, TenancyForm, CustomFieldModelForm):
                 # Gather PKs of all interfaces belonging to this Device or a peer VirtualChassis member
                 interface_ids = self.instance.vc_interfaces(if_master=False).values_list('pk', flat=True)
 
-                # Collect interface IPs
-                interface_ips = IPAddress.objects.filter(
+                if interface_ips := IPAddress.objects.filter(
                     address__family=family,
-                    assigned_object_type=ContentType.objects.get_for_model(Interface),
-                    assigned_object_id__in=interface_ids
-                ).prefetch_related('assigned_object')
-                if interface_ips:
+                    assigned_object_type=ContentType.objects.get_for_model(
+                        Interface
+                    ),
+                    assigned_object_id__in=interface_ids,
+                ).prefetch_related('assigned_object'):
                     ip_list = [(ip.id, f'{ip.address} ({ip.assigned_object})') for ip in interface_ips]
                     ip_choices.append(('Interface IPs', ip_list))
-                # Collect NAT IPs
-                nat_ips = IPAddress.objects.prefetch_related('nat_inside').filter(
-                    address__family=family,
-                    nat_inside__assigned_object_type=ContentType.objects.get_for_model(Interface),
-                    nat_inside__assigned_object_id__in=interface_ids
-                ).prefetch_related('assigned_object')
-                if nat_ips:
+                if (
+                    nat_ips := IPAddress.objects.prefetch_related('nat_inside')
+                    .filter(
+                        address__family=family,
+                        nat_inside__assigned_object_type=ContentType.objects.get_for_model(
+                            Interface
+                        ),
+                        nat_inside__assigned_object_id__in=interface_ids,
+                    )
+                    .prefetch_related('assigned_object')
+                ):
                     ip_list = [(ip.id, f'{ip.address} (NAT)') for ip in nat_ips]
                     ip_choices.append(('NAT IPs', ip_list))
-                self.fields['primary_ip{}'.format(family)].choices = ip_choices
+                self.fields[f'primary_ip{family}'].choices = ip_choices
 
             # If editing an existing device, exclude it from the list of occupied rack units. This ensures that a device
             # can be flipped from one face to another.
@@ -2369,9 +2371,7 @@ class DeviceForm(BootstrapMixin, TenancyForm, CustomFieldModelForm):
             self.fields['primary_ip6'].choices = []
             self.fields['primary_ip6'].widget.attrs['readonly'] = True
 
-        # Rack position
-        position = self.data.get('position') or self.initial.get('position')
-        if position:
+        if position := self.data.get('position') or self.initial.get('position'):
             self.fields['position'].widget.choices = [(position, f'U{position}')]
 
 
@@ -2516,14 +2516,10 @@ class ChildDeviceCSVForm(BaseDeviceCSVForm):
     def clean(self):
         super().clean()
 
-        # Set parent_bay reverse relationship
-        device_bay = self.cleaned_data.get('device_bay')
-        if device_bay:
+        if device_bay := self.cleaned_data.get('device_bay'):
             self.instance.parent_bay = device_bay
 
-        # Inherit site and rack from parent device
-        parent = self.cleaned_data.get('parent')
-        if parent:
+        if parent := self.cleaned_data.get('parent'):
             self.instance.site = parent.site
             self.instance.rack = parent.rack
 
@@ -3630,10 +3626,7 @@ class InterfaceCSVForm(CustomFieldModelCSVForm):
 
     def clean_enabled(self):
         # Make sure enabled is True when it's not included in the uploaded data
-        if 'enabled' not in self.data:
-            return True
-        else:
-            return self.cleaned_data['enabled']
+        return True if 'enabled' not in self.data else self.cleaned_data['enabled']
 
 
 #
@@ -3724,11 +3717,12 @@ class FrontPortCreateForm(ComponentCreateForm):
         choices = []
         rear_ports = RearPort.objects.filter(device=device)
         for rear_port in rear_ports:
-            for i in range(1, rear_port.positions + 1):
-                if (rear_port.pk, i) not in occupied_port_positions:
-                    choices.append(
-                        ('{}:{}'.format(rear_port.pk, i), '{}:{}'.format(rear_port.name, i))
-                    )
+            choices.extend(
+                (f'{rear_port.pk}:{i}', f'{rear_port.name}:{i}')
+                for i in range(1, rear_port.positions + 1)
+                if (rear_port.pk, i) not in occupied_port_positions
+            )
+
         self.fields['rear_port_set'].choices = choices
 
     def clean(self):
@@ -3738,10 +3732,11 @@ class FrontPortCreateForm(ComponentCreateForm):
         front_port_count = len(self.cleaned_data['name_pattern'])
         rear_port_count = len(self.cleaned_data['rear_port_set'])
         if front_port_count != rear_port_count:
-            raise forms.ValidationError({
-                'rear_port_set': 'The provided name pattern will create {} ports, however {} rear port assignments '
-                                 'were selected. These counts must match.'.format(front_port_count, rear_port_count)
-            })
+            raise forms.ValidationError(
+                {
+                    'rear_port_set': f'The provided name pattern will create {front_port_count} ports, however {rear_port_count} rear port assignments were selected. These counts must match.'
+                }
+            )
 
     def get_iterative_data(self, iteration):
 
@@ -4923,10 +4918,10 @@ class BaseVCMemberFormSet(forms.BaseModelFormSet):
         # Check for duplicate VC position values
         vc_position_list = []
         for form in self.forms:
-            vc_position = form.cleaned_data.get('vc_position')
-            if vc_position:
+            if vc_position := form.cleaned_data.get('vc_position'):
                 if vc_position in vc_position_list:
-                    error_msg = 'A virtual chassis member already exists in position {}.'.format(vc_position)
+                    error_msg = f'A virtual chassis member already exists in position {vc_position}.'
+
                     form.add_error('vc_position', error_msg)
                 vc_position_list.append(vc_position)
 
@@ -4967,8 +4962,9 @@ class DeviceVCMembershipForm(forms.ModelForm):
             )
             if conflicting_members.exists():
                 raise forms.ValidationError(
-                    'A virtual chassis member already exists in position {}.'.format(vc_position)
+                    f'A virtual chassis member already exists in position {vc_position}.'
                 )
+
 
         return vc_position
 

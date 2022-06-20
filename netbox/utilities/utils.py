@@ -34,14 +34,14 @@ def csv_format(data):
 
         # Force conversion to string first so we can check for any commas
         if not isinstance(value, str):
-            value = '{}'.format(value)
+            value = f'{value}'
 
         # Double-quote the value if it contains a comma or line break
         if ',' in value or '\n' in value:
             value = value.replace('"', '""')  # Escape double-quotes
-            csv.append('"{}"'.format(value))
+            csv.append(f'"{value}"')
         else:
-            csv.append('{}'.format(value))
+            csv.append(f'{value}')
 
     return ','.join(csv)
 
@@ -55,10 +55,7 @@ def foreground_color(bg_color, dark='000000', light='ffffff'):
     """
     bg_color = bg_color.strip('#')
     r, g, b = [int(bg_color[c:c + 2], 16) for c in (0, 2, 4)]
-    if r * 0.299 + g * 0.587 + b * 0.114 > 186:
-        return dark
-    else:
-        return light
+    return dark if r * 0.299 + g * 0.587 + b * 0.114 > 186 else light
 
 
 def dynamic_import(name):
@@ -152,7 +149,7 @@ def dict_to_filter_params(d, prefix=''):
     for key, val in d.items():
         k = prefix + key
         if isinstance(val, dict):
-            params.update(dict_to_filter_params(val, k + '__'))
+            params |= dict_to_filter_params(val, f'{k}__')
         else:
             params[k] = val
     return params
@@ -200,8 +197,9 @@ def to_meters(length, unit):
     valid_units = CableLengthUnitChoices.values()
     if unit not in valid_units:
         raise ValueError(
-            "Unknown unit {}. Must be one of the following: {}".format(unit, ', '.join(valid_units))
+            f"Unknown unit {unit}. Must be one of the following: {', '.join(valid_units)}"
         )
+
 
     if unit == CableLengthUnitChoices.UNIT_KILOMETER:
         return length * 1000
@@ -245,13 +243,8 @@ def prepare_cloned_fields(instance):
 
     # Copy tags
     if is_taggable(instance):
-        for tag in instance.tags.all():
-            params.append(('tags', tag.pk))
-
-    # Concatenate parameters into a URL query string
-    param_string = '&'.join([f'{k}={v}' for k, v in params])
-
-    return param_string
+        params.extend(('tags', tag.pk) for tag in instance.tags.all())
+    return '&'.join([f'{k}={v}' for k, v in params])
 
 
 def shallow_compare_dict(source_dict, destination_dict, exclude=None):
@@ -259,15 +252,12 @@ def shallow_compare_dict(source_dict, destination_dict, exclude=None):
     Return a new dictionary of the different keys. The values of `destination_dict` are returned. Only the equality of
     the first layer of keys/values is checked. `exclude` is a list or tuple of keys to be ignored.
     """
-    difference = {}
-
-    for key in destination_dict:
-        if source_dict.get(key) != destination_dict[key]:
-            if isinstance(exclude, (list, tuple)) and key in exclude:
-                continue
-            difference[key] = destination_dict[key]
-
-    return difference
+    return {
+        key: destination_dict[key]
+        for key in destination_dict
+        if source_dict.get(key) != destination_dict[key]
+        and (not isinstance(exclude, (list, tuple)) or key not in exclude)
+    }
 
 
 def flatten_dict(d, prefix='', separator='.'):
@@ -282,7 +272,7 @@ def flatten_dict(d, prefix='', separator='.'):
     for k, v in d.items():
         key = separator.join([prefix, k]) if prefix else k
         if type(v) is dict:
-            ret.update(flatten_dict(v, prefix=key))
+            ret |= flatten_dict(v, prefix=key)
         else:
             ret[key] = v
     return ret
@@ -306,18 +296,21 @@ def decode_dict(encoded_dict: Dict, *, decode_keys: bool = True) -> Dict:
         # Decode string values.
         if isinstance(value, str):
             return urllib.parse.unquote(value)
-        # Recursively decode each list item.
         elif isinstance(value, list):
             return [decode_value(v, _decode_keys) for v in value]
-        # Recursively decode each tuple item.
         elif isinstance(value, Tuple):
             return tuple(decode_value(v, _decode_keys) for v in value)
-        # Recursively decode each dict key/value pair.
         elif isinstance(value, dict):
             # Don't decode keys, if `decode_keys` is false.
-            if not _decode_keys:
-                return {k: decode_value(v, _decode_keys) for k, v in value.items()}
-            return {urllib.parse.unquote(k): decode_value(v, _decode_keys) for k, v in value.items()}
+            return (
+                {
+                    urllib.parse.unquote(k): decode_value(v, _decode_keys)
+                    for k, v in value.items()
+                }
+                if _decode_keys
+                else {k: decode_value(v, _decode_keys) for k, v in value.items()}
+            )
+
         return value
 
     if not decode_keys:

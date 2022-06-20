@@ -59,8 +59,9 @@ if hasattr(configuration, 'RELEASE_CHECK_TIMEOUT'):
 for parameter in ['ALLOWED_HOSTS', 'DATABASE', 'SECRET_KEY', 'REDIS']:
     if not hasattr(configuration, parameter):
         raise ImproperlyConfigured(
-            "Required parameter {} is missing from configuration.py.".format(parameter)
+            f"Required parameter {parameter} is missing from configuration.py."
         )
+
 
 # Set required parameters
 ALLOWED_HOSTS = getattr(configuration, 'ALLOWED_HOSTS')
@@ -76,8 +77,7 @@ ALLOWED_URL_SCHEMES = getattr(configuration, 'ALLOWED_URL_SCHEMES', (
 BANNER_BOTTOM = getattr(configuration, 'BANNER_BOTTOM', '')
 BANNER_LOGIN = getattr(configuration, 'BANNER_LOGIN', '')
 BANNER_TOP = getattr(configuration, 'BANNER_TOP', '')
-BASE_PATH = getattr(configuration, 'BASE_PATH', '')
-if BASE_PATH:
+if BASE_PATH := getattr(configuration, 'BASE_PATH', ''):
     BASE_PATH = BASE_PATH.strip('/') + '/'  # Enforce trailing slash only
 CHANGELOG_RETENTION = getattr(configuration, 'CHANGELOG_RETENTION', 90)
 CORS_ORIGIN_ALLOW_ALL = getattr(configuration, 'CORS_ORIGIN_ALLOW_ALL', False)
@@ -352,7 +352,7 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'netbox.urls'
 
-TEMPLATES_DIR = BASE_DIR + '/templates'
+TEMPLATES_DIR = f'{BASE_DIR}/templates'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -389,7 +389,7 @@ USE_X_FORWARDED_HOST = True
 X_FRAME_OPTIONS = 'SAMEORIGIN'
 
 # Static files (CSS, JavaScript, Images)
-STATIC_ROOT = BASE_DIR + '/static'
+STATIC_ROOT = f'{BASE_DIR}/static'
 STATIC_URL = f'/{BASE_PATH}static/'
 STATICFILES_DIRS = (
     os.path.join(BASE_DIR, 'project-static', 'dist'),
@@ -398,7 +398,7 @@ STATICFILES_DIRS = (
 )
 
 # Media
-MEDIA_URL = '/{}media/'.format(BASE_PATH)
+MEDIA_URL = f'/{BASE_PATH}media/'
 
 # Disable default limit of 1000 fields per request. Needed for bulk deletion of objects. (Added in Django 1.10.)
 DATA_UPLOAD_MAX_NUMBER_FIELDS = None
@@ -409,7 +409,7 @@ MESSAGE_TAGS = {
 }
 
 # Authentication URLs
-LOGIN_URL = '/{}login/'.format(BASE_PATH)
+LOGIN_URL = f'/{BASE_PATH}login/'
 
 CSRF_TRUSTED_ORIGINS = ALLOWED_HOSTS
 
@@ -593,20 +593,20 @@ for plugin_name in PLUGINS:
     except ModuleNotFoundError as e:
         if getattr(e, 'name') == plugin_name:
             raise ImproperlyConfigured(
-                "Unable to import plugin {}: Module not found. Check that the plugin module has been installed within the "
-                "correct Python environment.".format(plugin_name)
+                f"Unable to import plugin {plugin_name}: Module not found. Check that the plugin module has been installed within the correct Python environment."
             )
+
         raise e
 
     # Determine plugin config and add to INSTALLED_APPS.
     try:
         plugin_config = plugin.config
-        INSTALLED_APPS.append("{}.{}".format(plugin_config.__module__, plugin_config.__name__))
+        INSTALLED_APPS.append(f"{plugin_config.__module__}.{plugin_config.__name__}")
     except AttributeError:
         raise ImproperlyConfigured(
-            "Plugin {} does not provide a 'config' variable. This should be defined in the plugin's __init__.py file "
-            "and point to the PluginConfig subclass.".format(plugin_name)
+            f"Plugin {plugin_name} does not provide a 'config' variable. This should be defined in the plugin's __init__.py file and point to the PluginConfig subclass."
         )
+
 
     # Validate user-provided configuration settings and assign defaults
     if plugin_name not in PLUGINS_CONFIG:
@@ -622,9 +622,7 @@ for plugin_name in PLUGINS:
     # we use the plugin name as a prefix for queue name's defined in the plugin config
     # ex: mysuperplugin.mysuperqueue1
     if type(plugin_config.queues) is not list:
-        raise ImproperlyConfigured(
-            "Plugin {} queues must be a list.".format(plugin_name)
-        )
-    RQ_QUEUES.update({
+        raise ImproperlyConfigured(f"Plugin {plugin_name} queues must be a list.")
+    RQ_QUEUES |= {
         f"{plugin_name}.{queue}": RQ_PARAMS for queue in plugin_config.queues
-    })
+    }

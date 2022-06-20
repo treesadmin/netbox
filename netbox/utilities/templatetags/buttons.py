@@ -14,11 +14,7 @@ def _get_viewname(instance, action):
 
     # Validate action
     assert action in ('add', 'edit', 'delete')
-    viewname = "{}:{}_{}".format(
-        instance._meta.app_label, instance._meta.model_name, action
-    )
-
-    return viewname
+    return f"{instance._meta.app_label}:{instance._meta.model_name}_{action}"
 
 
 #
@@ -29,9 +25,7 @@ def _get_viewname(instance, action):
 def clone_button(instance):
     url = reverse(_get_viewname(instance, 'add'))
 
-    # Populate cloned field values
-    param_string = prepare_cloned_fields(instance)
-    if param_string:
+    if param_string := prepare_cloned_fields(instance):
         url = f'{url}?{param_string}'
 
     return {

@@ -15,11 +15,8 @@ class EnhancedPaginator(Paginator):
             per_page = settings.PAGINATE_COUNT
 
         # Set orphans count based on page size
-        if orphans is None and per_page <= 50:
-            orphans = 5
-        elif orphans is None:
-            orphans = 10
-
+        if orphans is None:
+            orphans = 5 if per_page <= 50 else 10
         super().__init__(object_list, per_page, orphans=orphans, **kwargs)
 
     def _get_page(self, *args, **kwargs):

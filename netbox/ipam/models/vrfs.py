@@ -70,9 +70,7 @@ class VRF(PrimaryModel):
         verbose_name_plural = 'VRFs'
 
     def __str__(self):
-        if self.rd:
-            return f'{self.name} ({self.rd})'
-        return self.name
+        return f'{self.name} ({self.rd})' if self.rd else self.name
 
     def get_absolute_url(self):
         return reverse('ipam:vrf', args=[self.pk])

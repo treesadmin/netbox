@@ -201,9 +201,7 @@ class Rack(PrimaryModel):
         )
 
     def __str__(self):
-        if self.facility_id:
-            return f'{self.name} ({self.facility_id})'
-        return self.name
+        return f'{self.name} ({self.facility_id})' if self.facility_id else self.name
 
     def get_absolute_url(self):
         return reverse('dcim:rack', args=[self.pk])
@@ -222,26 +220,25 @@ class Rack(PrimaryModel):
             self.outer_unit = ''
 
         if self.pk:
-            # Validate that Rack is tall enough to house the installed Devices
-            top_device = Device.objects.filter(
-                rack=self
-            ).exclude(
-                position__isnull=True
-            ).order_by('-position').first()
-            if top_device:
+            if (
+                top_device := Device.objects.filter(rack=self)
+                .exclude(position__isnull=True)
+                .order_by('-position')
+                .first()
+            ):
                 min_height = top_device.position + top_device.device_type.u_height - 1
                 if self.u_height < min_height:
-                    raise ValidationError({
-                        'u_height': "Rack must be at least {}U tall to house currently installed devices.".format(
-                            min_height
-                        )
-                    })
+                    raise ValidationError(
+                        {
+                            'u_height': f"Rack must be at least {min_height}U tall to house currently installed devices."
+                        }
+                    )
+
             # Validate that Rack was assigned a Location of its same site, if applicable
-            if self.location:
-                if self.location.site != self.site:
-                    raise ValidationError({
-                        'location': f"Location must be from the same site, {self.site}."
-                    })
+            if self.location and self.location.site != self.site:
+                raise ValidationError({
+                    'location': f"Location must be from the same site, {self.site}."
+                })
 
     @property
     def units(self):
@@ -316,7 +313,7 @@ class Rack(PrimaryModel):
                     for u in range(device.position + 1, device.position + device.device_type.u_height):
                         elevation.pop(u, None)
 
-        return [u for u in elevation.values()]
+        return list(elevation.values())
 
     def get_available_units(self, u_height=1, rack_face=None, exclude=None):
         """
@@ -347,10 +344,9 @@ class Rack(PrimaryModel):
                         pass
 
         # Remove units without enough space above them to accommodate a device of the specified height
-        available_units = []
-        for u in units:
-            if set(range(u, u + u_height)).issubset(units):
-                available_units.append(u)
+        available_units = [
+            u for u in units if set(range(u, u + u_height)).issubset(units)
+        ]
 
         return list(reversed(available_units))
 
@@ -408,9 +404,7 @@ class Rack(PrimaryModel):
                 available_units.remove(u)
 
         occupied_unit_count = self.u_height - len(available_units)
-        percentage = int(float(occupied_unit_count) / self.u_height * 100)
-
-        return percentage
+        return int(float(occupied_unit_count) / self.u_height * 100)
 
     def get_power_utilization(self):
         """
@@ -468,7 +462,7 @@ class RackReservation(PrimaryModel):
         ordering = ['created', 'pk']
 
     def __str__(self):
-        return "Reservation for rack {}".format(self.rack)
+        return f"Reservation for rack {self.rack}"
 
     def get_absolute_url(self):
         return reverse('dcim:rackreservation', args=[self.pk])
@@ -478,27 +472,26 @@ class RackReservation(PrimaryModel):
 
         if hasattr(self, 'rack') and self.units:
 
-            # Validate that all specified units exist in the Rack.
-            invalid_units = [u for u in self.units if u not in self.rack.units]
-            if invalid_units:
-                raise ValidationError({
-                    'units': "Invalid unit(s) for {}U rack: {}".format(
-                        self.rack.u_height,
-                        ', '.join([str(u) for u in invalid_units]),
-                    ),
-                })
+            if invalid_units := [
+                u for u in self.units if u not in self.rack.units
+            ]:
+                raise ValidationError(
+                    {
+                        'units': f"Invalid unit(s) for {self.rack.u_height}U rack: {', '.join([str(u) for u in invalid_units])}"
+                    }
+                )
+
 
             # Check that none of the units has already been reserved for this Rack.
             reserved_units = []
             for resv in self.rack.reservations.exclude(pk=self.pk):
                 reserved_units += resv.units
-            conflicting_units = [u for u in self.units if u in reserved_units]
-            if conflicting_units:
-                raise ValidationError({
-                    'units': 'The following units have already been reserved: {}'.format(
-                        ', '.join([str(u) for u in conflicting_units]),
-                    )
-                })
+            if conflicting_units := [u for u in self.units if u in reserved_units]:
+                raise ValidationError(
+                    {
+                        'units': f"The following units have already been reserved: {', '.join([str(u) for u in conflicting_units])}"
+                    }
+                )
 
     @property
     def unit_list(self):

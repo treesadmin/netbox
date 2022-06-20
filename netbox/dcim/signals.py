@@ -13,8 +13,7 @@ def create_cablepath(node):
     """
     Create CablePaths for all paths originating from the specified node.
     """
-    cp = CablePath.from_origin(node)
-    if cp:
+    if cp := CablePath.from_origin(node):
         try:
             cp.save()
         except Exception as e:
@@ -153,8 +152,7 @@ def nullify_connected_endpoints(instance, **kwargs):
 
     # Delete and retrace any dependent cable paths
     for cablepath in CablePath.objects.filter(path__contains=instance):
-        cp = CablePath.from_origin(cablepath.origin)
-        if cp:
+        if cp := CablePath.from_origin(cablepath.origin):
             CablePath.objects.filter(pk=cablepath.pk).update(
                 path=cp.path,
                 destination_type=ContentType.objects.get_for_model(cp.destination) if cp.destination else None,

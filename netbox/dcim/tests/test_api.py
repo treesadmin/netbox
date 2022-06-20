@@ -15,7 +15,7 @@ class AppTest(APITestCase):
     def test_root(self):
 
         url = reverse('dcim-api:api-root')
-        response = self.client.get('{}?format=api'.format(url), **self.header)
+        response = self.client.get(f'{url}?format=api', **self.header)
 
         self.assertEqual(response.status_code, 200)
 
@@ -1447,8 +1447,15 @@ class CableTest(APIViewTestCases.APIViewTestCase):
 
         interfaces = []
         for device in devices:
-            for i in range(0, 10):
-                interfaces.append(Interface(device=device, type=InterfaceTypeChoices.TYPE_1GE_FIXED, name=f'eth{i}'))
+            interfaces.extend(
+                Interface(
+                    device=device,
+                    type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                    name=f'eth{i}',
+                )
+                for i in range(10)
+            )
+
         Interface.objects.bulk_create(interfaces)
 
         cables = (
@@ -1520,7 +1527,10 @@ class ConnectedDeviceTest(APITestCase):
     def test_get_connected_device(self):
 
         url = reverse('dcim-api:connected-device-list')
-        response = self.client.get(url + '?peer_device=TestDevice2&peer_interface=eth0', **self.header)
+        response = self.client.get(
+            f'{url}?peer_device=TestDevice2&peer_interface=eth0', **self.header
+        )
+
 
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data['name'], self.device1.name)
@@ -1556,11 +1566,15 @@ class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
         # Create 12 interfaces per device
         interfaces = []
         for i, device in enumerate(devices):
-            for j in range(0, 13):
-                interfaces.append(
-                    # Interface name starts with parent device's position in VC; e.g. 1/1, 1/2, 1/3...
-                    Interface(device=device, name=f'{i%3+1}/{j}', type=InterfaceTypeChoices.TYPE_1GE_FIXED)
+            interfaces.extend(
+                Interface(
+                    device=device,
+                    name=f'{i%3+1}/{j}',
+                    type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                 )
+                for j in range(13)
+            )
+
         Interface.objects.bulk_create(interfaces)
 
         # Create three VirtualChassis with three members each

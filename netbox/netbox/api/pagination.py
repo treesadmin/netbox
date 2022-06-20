@@ -54,15 +54,9 @@ class OptionalLimitOffsetPagination(LimitOffsetPagination):
     def get_next_link(self):
 
         # Pagination has been disabled
-        if not self.limit:
-            return None
-
-        return super().get_next_link()
+        return super().get_next_link() if self.limit else None
 
     def get_previous_link(self):
 
         # Pagination has been disabled
-        if not self.limit:
-            return None
-
-        return super().get_previous_link()
+        return super().get_previous_link() if self.limit else None

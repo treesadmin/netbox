@@ -621,7 +621,7 @@ class ReportListView(ContentTypePermissionRequiredMixin, View):
         for module, report_list in reports:
             module_reports = []
             for report in report_list:
-                report.result = results.get(report.full_name, None)
+                report.result = results.get(report.full_name)
                 module_reports.append(report)
             ret.append((module, module_reports))
 

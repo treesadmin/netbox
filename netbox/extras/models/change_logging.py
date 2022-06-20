@@ -84,12 +84,7 @@ class ObjectChange(BigIDModel):
         ordering = ['-time']
 
     def __str__(self):
-        return '{} {} {} by {}'.format(
-            self.changed_object_type,
-            self.object_repr,
-            self.get_action_display().lower(),
-            self.user_name
-        )
+        return f'{self.changed_object_type} {self.object_repr} {self.get_action_display().lower()} by {self.user_name}'
 
     def save(self, *args, **kwargs):
 

@@ -104,9 +104,9 @@ class RemoteUserMiddleware(RemoteUserMiddleware_):
         logger = logging.getLogger(
             'netbox.authentication.RemoteUserMiddleware')
 
-        groups_string = request.META.get(
-            settings.REMOTE_AUTH_GROUP_HEADER, None)
-        if groups_string:
+        if groups_string := request.META.get(
+            settings.REMOTE_AUTH_GROUP_HEADER, None
+        ):
             groups = groups_string.split(settings.REMOTE_AUTH_GROUP_SEPARATOR)
         else:
             groups = []

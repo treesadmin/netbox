@@ -544,7 +544,7 @@ class CustomFieldModelFilterForm(forms.Form):
             filter_logic=CustomFieldFilterLogicChoices.FILTER_DISABLED
         )
         for cf in custom_fields:
-            field_name = 'cf_{}'.format(cf.name)
+            field_name = f'cf_{cf.name}'
             self.fields[field_name] = cf.to_form_field(set_initial=True, enforce_required=False)
             self.custom_field_filters.append(field_name)
 
@@ -979,4 +979,4 @@ class ScriptForm(BootstrapMixin, forms.Form):
         """
         A boolean indicating whether the form requires user input (ignore the _commit field).
         """
-        return bool(len(self.fields) > 1)
+        return len(self.fields) > 1

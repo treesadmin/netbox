@@ -213,10 +213,7 @@ class ConfigContextTestCase(
 
         # Create three ConfigContexts
         for i in range(1, 4):
-            configcontext = ConfigContext(
-                name='Config Context {}'.format(i),
-                data={'foo': i}
-            )
+            configcontext = ConfigContext(name=f'Config Context {i}', data={'foo': i})
             configcontext.save()
             configcontext.sites.add(site)
 
@@ -256,7 +253,7 @@ class ObjectChangeTestCase(TestCase):
 
         # Create three ObjectChanges
         user = User.objects.create_user(username='testuser2')
-        for i in range(1, 4):
+        for _ in range(1, 4):
             oc = site.to_objectchange(action=ObjectChangeActionChoices.ACTION_UPDATE)
             oc.user = user
             oc.request_id = uuid.uuid4()
@@ -269,7 +266,7 @@ class ObjectChangeTestCase(TestCase):
             "user": User.objects.first().pk,
         }
 
-        response = self.client.get('{}?{}'.format(url, urllib.parse.urlencode(params)))
+        response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
         self.assertHttpStatus(response, 200)
 
     def test_objectchange(self):

@@ -644,7 +644,7 @@ class ViewTestCases:
             }
 
             # Append the form data to the request
-            data.update(post_data(self.bulk_edit_data))
+            data |= post_data(self.bulk_edit_data)
 
             # Assign model-level permission
             obj_perm = ObjectPermission(
@@ -657,7 +657,7 @@ class ViewTestCases:
 
             # Try POST with model-level permission
             self.assertHttpStatus(self.client.post(self._get_url('bulk_edit'), data), 302)
-            for i, instance in enumerate(self._get_queryset().filter(pk__in=pk_list)):
+            for instance in self._get_queryset().filter(pk__in=pk_list):
                 self.assertInstanceEqual(instance, self.bulk_edit_data)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=['*'])
@@ -669,7 +669,7 @@ class ViewTestCases:
             }
 
             # Append the form data to the request
-            data.update(post_data(self.bulk_edit_data))
+            data |= post_data(self.bulk_edit_data)
 
             # Dynamically determine a constraint that will *not* be matched by the updated objects.
             attr_name = list(self.bulk_edit_data.keys())[0]
@@ -696,7 +696,7 @@ class ViewTestCases:
 
             # Bulk edit permitted objects
             self.assertHttpStatus(self.client.post(self._get_url('bulk_edit'), data), 302)
-            for i, instance in enumerate(self._get_queryset().filter(pk__in=pk_list)):
+            for instance in self._get_queryset().filter(pk__in=pk_list):
                 self.assertInstanceEqual(instance, self.bulk_edit_data)
 
     class BulkDeleteObjectsViewTestCase(ModelViewTestCase):
@@ -790,7 +790,7 @@ class ViewTestCases:
                 'pk': pk_list,
                 '_apply': True,  # Form button
             }
-            data.update(self.rename_data)
+            data |= self.rename_data
 
             # Test GET without permission
             with disable_warnings('django.request'):
@@ -808,7 +808,7 @@ class ViewTestCases:
                 'pk': pk_list,
                 '_apply': True,  # Form button
             }
-            data.update(self.rename_data)
+            data |= self.rename_data
 
             # Assign model-level permission
             obj_perm = ObjectPermission(
@@ -832,7 +832,7 @@ class ViewTestCases:
                 'pk': pk_list,
                 '_apply': True,  # Form button
             }
-            data.update(self.rename_data)
+            data |= self.rename_data
 
             # Assign constrained permission
             obj_perm = ObjectPermission(

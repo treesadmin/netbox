@@ -100,8 +100,8 @@ class StringVar(ScriptVariable):
             self.field_attrs['validators'] = [
                 RegexValidator(
                     regex=regex,
-                    message='Invalid value. Must match regex: {}'.format(regex),
-                    code='invalid'
+                    message=f'Invalid value. Must match regex: {regex}',
+                    code='invalid',
                 )
             ]
 
@@ -491,6 +491,5 @@ def get_script(module_name, script_name):
     Retrieve a script class by module and name. Returns None if the script does not exist.
     """
     scripts = get_scripts()
-    module = scripts.get(module_name)
-    if module:
+    if module := scripts.get(module_name):
         return module.get(script_name)

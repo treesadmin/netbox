@@ -78,9 +78,11 @@ class BulkDisconnectView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View)
                         obj.cable.delete()
                         count += 1
 
-                messages.success(request, "Disconnected {} {}".format(
-                    count, self.queryset.model._meta.verbose_name_plural
-                ))
+                messages.success(
+                    request,
+                    f"Disconnected {count} {self.queryset.model._meta.verbose_name_plural}",
+                )
+
 
                 return redirect(return_url)
 
@@ -2136,7 +2138,10 @@ class DeviceBayPopulateView(generic.ObjectEditView):
 
             device_bay.installed_device = form.cleaned_data['installed_device']
             device_bay.save()
-            messages.success(request, "Added {} to {}.".format(device_bay.installed_device, device_bay))
+            messages.success(
+                request, f"Added {device_bay.installed_device} to {device_bay}."
+            )
+
 
             return redirect('dcim:device', pk=device_bay.device.pk)
 
@@ -2169,7 +2174,10 @@ class DeviceBayDepopulateView(generic.ObjectEditView):
             removed_device = device_bay.installed_device
             device_bay.installed_device = None
             device_bay.save()
-            messages.success(request, "{} has been removed from {}.".format(removed_device, device_bay))
+            messages.success(
+                request, f"{removed_device} has been removed from {device_bay}."
+            )
+
 
             return redirect('dcim:device', pk=device_bay.device.pk)
 
@@ -2706,7 +2714,8 @@ class VirtualChassisAddMemberView(ObjectPermissionRequiredMixin, GetReturnURLMix
             if membership_form.is_valid():
 
                 membership_form.save()
-                msg = 'Added member <a href="{}">{}</a>'.format(device.get_absolute_url(), escape(device))
+                msg = f'Added member <a href="{device.get_absolute_url()}">{escape(device)}</a>'
+
                 messages.success(request, mark_safe(msg))
 
                 if '_addanother' in request.POST:
@@ -2751,7 +2760,8 @@ class VirtualChassisRemoveMemberView(ObjectPermissionRequiredMixin, GetReturnURL
         # Protect master device from being removed
         virtual_chassis = VirtualChassis.objects.filter(master=device).first()
         if virtual_chassis is not None:
-            msg = 'Unable to remove master device {} from the virtual chassis.'.format(escape(device))
+            msg = f'Unable to remove master device {escape(device)} from the virtual chassis.'
+
             messages.error(request, mark_safe(msg))
             return redirect(device.get_absolute_url())
 
@@ -2764,7 +2774,7 @@ class VirtualChassisRemoveMemberView(ObjectPermissionRequiredMixin, GetReturnURL
                 device.vc_priority = None
                 device.save()
 
-            msg = 'Removed {} from virtual chassis {}'.format(device, device.virtual_chassis)
+            msg = f'Removed {device} from virtual chassis {device.virtual_chassis}'
             messages.success(request, msg)
 
             return redirect(self.get_return_url(request, device))

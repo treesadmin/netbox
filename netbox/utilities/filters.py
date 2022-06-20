@@ -15,12 +15,16 @@ def multivalue_field_factory(field_class):
         widget = forms.SelectMultiple
 
         def to_python(self, value):
-            if not value:
-                return []
-            return [
-                # Only append non-empty values (this avoids e.g. trying to cast '' as an integer)
-                super(field_class, self).to_python(v) for v in value if v
-            ]
+            return (
+                [
+                    # Only append non-empty values (this avoids e.g. trying to cast '' as an integer)
+                    super(field_class, self).to_python(v)
+                    for v in value
+                    if v
+                ]
+                if value
+                else []
+            )
 
     return type('MultiValue{}'.format(field_class.__name__), (NewField,), dict())
 
@@ -68,7 +72,13 @@ class TreeNodeMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilter):
         return super().get_filter_predicate(v)
 
     def filter(self, qs, value):
-        value = [node.get_descendants(include_self=True) if not isinstance(node, str) else node for node in value]
+        value = [
+            node
+            if isinstance(node, str)
+            else node.get_descendants(include_self=True)
+            for node in value
+        ]
+
         return super().filter(qs, value)
 
 
@@ -79,7 +89,7 @@ class NullableCharFieldFilter(django_filters.CharFilter):
     def filter(self, qs, value):
         if value != settings.FILTERS_NULL_CHOICE_VALUE:
             return super().filter(qs, value)
-        qs = self.get_method(qs)(**{'{}__isnull'.format(self.field_name): True})
+        qs = self.get_method(qs)(**{f'{self.field_name}__isnull': True})
         return qs.distinct() if self.distinct else qs
 
 

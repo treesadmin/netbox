@@ -94,9 +94,7 @@ class TagFilterField(forms.MultipleChoiceField):
             tags = model.tags.annotate(
                 count=Count('extras_taggeditem_items')
             ).order_by('name')
-            return [
-                (str(tag.slug), '{} ({})'.format(tag.name, tag.count)) for tag in tags
-            ]
+            return [(str(tag.slug), f'{tag.name} ({tag.count})') for tag in tags]
 
         # Choices are fetched each time the form is initialized
         super().__init__(label='Tags', choices=get_choices, required=False, *args, **kwargs)
@@ -286,11 +284,11 @@ class CSVContentTypeField(CSVModelChoiceField):
         try:
             app_label, model = value.split('.')
         except ValueError:
-            raise forms.ValidationError(f'Object type must be specified as "<app>.<model>"')
+            raise forms.ValidationError('Object type must be specified as "<app>.<model>"')
         try:
             return self.queryset.get(app_label=app_label, model=model)
         except ObjectDoesNotExist:
-            raise forms.ValidationError(f'Invalid object type')
+            raise forms.ValidationError('Invalid object type')
 
 
 class CSVMultipleContentTypeField(forms.ModelMultipleChoiceField):
@@ -424,16 +422,12 @@ class DynamicModelChoiceMixin:
         if not self.initial and self.initial_params:
             filter_kwargs = {}
             for kwarg, child_field in self.initial_params.items():
-                value = form.initial.get(child_field.lstrip('$'))
-                if value:
+                if value := form.initial.get(child_field.lstrip('$')):
                     filter_kwargs[kwarg] = value
             if filter_kwargs:
                 self.initial = self.queryset.filter(**filter_kwargs).first()
 
-        # Modify the QuerySet of the field before we return it. Limit choices to any data already bound: Options
-        # will be populated on-demand via the APISelect widget.
-        data = bound_field.value()
-        if data:
+        if data := bound_field.value():
             field_name = getattr(self, 'to_field_name') or 'pk'
             filter = self.filter(field_name=field_name)
             try:
@@ -449,7 +443,7 @@ class DynamicModelChoiceMixin:
         if not widget.attrs.get('data-url'):
             app_label = self.queryset.model._meta.app_label
             model_name = self.queryset.model._meta.model_name
-            data_url = reverse('{}-api:{}-list'.format(app_label, model_name))
+            data_url = reverse(f'{app_label}-api:{model_name}-list')
             widget.attrs['data-url'] = data_url
 
         return bound_field

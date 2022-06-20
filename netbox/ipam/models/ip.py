@@ -134,28 +134,27 @@ class Aggregate(PrimaryModel):
             if self.pk:
                 covering_aggregates = covering_aggregates.exclude(pk=self.pk)
             if covering_aggregates:
-                raise ValidationError({
-                    'prefix': "Aggregates cannot overlap. {} is already covered by an existing aggregate ({}).".format(
-                        self.prefix, covering_aggregates[0]
-                    )
-                })
+                raise ValidationError(
+                    {
+                        'prefix': f"Aggregates cannot overlap. {self.prefix} is already covered by an existing aggregate ({covering_aggregates[0]})."
+                    }
+                )
+
 
             # Ensure that the aggregate being added does not cover an existing aggregate
             covered_aggregates = Aggregate.objects.filter(prefix__net_contained=str(self.prefix))
             if self.pk:
                 covered_aggregates = covered_aggregates.exclude(pk=self.pk)
             if covered_aggregates:
-                raise ValidationError({
-                    'prefix': "Aggregates cannot overlap. {} covers an existing aggregate ({}).".format(
-                        self.prefix, covered_aggregates[0]
-                    )
-                })
+                raise ValidationError(
+                    {
+                        'prefix': f"Aggregates cannot overlap. {self.prefix} covers an existing aggregate ({covered_aggregates[0]})."
+                    }
+                )
 
     @property
     def family(self):
-        if self.prefix:
-            return self.prefix.version
-        return None
+        return self.prefix.version if self.prefix else None
 
     def get_utilization(self):
         """
@@ -317,14 +316,12 @@ class Prefix(PrimaryModel):
 
             # Enforce unique IP space (if applicable)
             if (self.vrf is None and settings.ENFORCE_GLOBAL_UNIQUE) or (self.vrf and self.vrf.enforce_unique):
-                duplicate_prefixes = self.get_duplicates()
-                if duplicate_prefixes:
-                    raise ValidationError({
-                        'prefix': "Duplicate prefix found in {}: {}".format(
-                            "VRF {}".format(self.vrf) if self.vrf else "global table",
-                            duplicate_prefixes.first(),
-                        )
-                    })
+                if duplicate_prefixes := self.get_duplicates():
+                    raise ValidationError(
+                        {
+                            'prefix': f'Duplicate prefix found in {f"VRF {self.vrf}" if self.vrf else "global table"}: {duplicate_prefixes.first()}'
+                        }
+                    )
 
     def save(self, *args, **kwargs):
 
@@ -422,9 +419,7 @@ class Prefix(PrimaryModel):
         """
         prefix = netaddr.IPSet(self.prefix)
         child_prefixes = netaddr.IPSet([child.prefix for child in self.get_child_prefixes()])
-        available_prefixes = prefix - child_prefixes
-
-        return available_prefixes
+        return prefix - child_prefixes
 
     def get_available_ips(self):
         """
@@ -468,7 +463,7 @@ class Prefix(PrimaryModel):
         available_ips = self.get_available_ips()
         if not available_ips:
             return None
-        return '{}/{}'.format(next(available_ips.__iter__()), self.prefix.prefixlen)
+        return f'{next(available_ips.__iter__())}/{self.prefix.prefixlen}'
 
     def get_utilization(self):
         """
@@ -591,13 +586,25 @@ class IPRange(PrimaryModel):
                     'end_address': f"Ending address must be lower than the starting address ({self.start_address})"
                 })
 
-            # Check for overlapping ranges
-            overlapping_range = IPRange.objects.exclude(pk=self.pk).filter(vrf=self.vrf).filter(
-                Q(start_address__gte=self.start_address, start_address__lte=self.end_address) |  # Starts inside
-                Q(end_address__gte=self.start_address, end_address__lte=self.end_address) |  # Ends inside
-                Q(start_address__lte=self.start_address, end_address__gte=self.end_address)  # Starts & ends outside
-            ).first()
-            if overlapping_range:
+            if (
+                overlapping_range := IPRange.objects.exclude(pk=self.pk)
+                .filter(vrf=self.vrf)
+                .filter(
+                    Q(
+                        start_address__gte=self.start_address,
+                        start_address__lte=self.end_address,
+                    )
+                    | Q(  # Starts inside
+                        end_address__gte=self.start_address,
+                        end_address__lte=self.end_address,
+                    )
+                    | Q(  # Ends inside
+                        start_address__lte=self.start_address,
+                        end_address__gte=self.end_address,
+                    )  # Starts & ends outside
+                )
+                .first()
+            ):
                 raise ValidationError(f"Defined addresses overlap with range {overlapping_range} in VRF {self.vrf}")
 
     def save(self, *args, **kwargs):
@@ -628,11 +635,7 @@ class IPRange(PrimaryModel):
         start_chunks = str(self.start_address.ip).split(separator)
         end_chunks = str(self.end_address.ip).split(separator)
 
-        base_chunks = []
-        for a, b in zip(start_chunks, end_chunks):
-            if a == b:
-                base_chunks.append(a)
-
+        base_chunks = [a for a, b in zip(start_chunks, end_chunks) if a == b]
         base_str = separator.join(base_chunks)
         start_str = separator.join(start_chunks[len(base_chunks):])
         end_str = separator.join(end_chunks[len(base_chunks):])
@@ -679,7 +682,7 @@ class IPRange(PrimaryModel):
         if not available_ips:
             return None
 
-        return '{}/{}'.format(next(available_ips.__iter__()), self.start_address.prefixlen)
+        return f'{next(available_ips.__iter__())}/{self.start_address.prefixlen}'
 
     @cached_property
     def utilization(self):
@@ -814,24 +817,30 @@ class IPAddress(PrimaryModel):
                         self.role not in IPADDRESS_ROLES_NONUNIQUE or
                         any(dip.role not in IPADDRESS_ROLES_NONUNIQUE for dip in duplicate_ips)
                 ):
-                    raise ValidationError({
-                        'address': "Duplicate IP address found in {}: {}".format(
-                            "VRF {}".format(self.vrf) if self.vrf else "global table",
-                            duplicate_ips.first(),
-                        )
-                    })
+                    raise ValidationError(
+                        {
+                            'address': f'Duplicate IP address found in {f"VRF {self.vrf}" if self.vrf else "global table"}: {duplicate_ips.first()}'
+                        }
+                    )
+
 
         # Check for primary IP assignment that doesn't match the assigned device/VM
         if self.pk:
             for cls, attr in ((Device, 'device'), (VirtualMachine, 'virtual_machine')):
                 parent = cls.objects.filter(Q(primary_ip4=self) | Q(primary_ip6=self)).first()
-                if parent and getattr(self.assigned_object, attr, None) != parent:
-                    # Check for a NAT relationship
-                    if not self.nat_inside or getattr(self.nat_inside.assigned_object, attr, None) != parent:
-                        raise ValidationError({
-                            'interface': f"IP address is primary for {cls._meta.model_name} {parent} but "
-                                         f"not assigned to it!"
-                        })
+                if (
+                    parent
+                    and getattr(self.assigned_object, attr, None) != parent
+                    and (
+                        not self.nat_inside
+                        or getattr(self.nat_inside.assigned_object, attr, None)
+                        != parent
+                    )
+                ):
+                    raise ValidationError({
+                        'interface': f"IP address is primary for {cls._meta.model_name} {parent} but "
+                                     f"not assigned to it!"
+                    })
 
         # Validate IP status selection
         if self.status == IPAddressStatusChoices.STATUS_SLAAC and self.family != 6:
@@ -852,9 +861,7 @@ class IPAddress(PrimaryModel):
 
     @property
     def family(self):
-        if self.address:
-            return self.address.version
-        return None
+        return self.address.version if self.address else None
 
     def _set_mask_length(self, value):
         """

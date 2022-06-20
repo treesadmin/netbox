@@ -15,7 +15,7 @@ class AppTest(APITestCase):
     def test_root(self):
 
         url = reverse('ipam-api:api-root')
-        response = self.client.get('{}?format=api'.format(url), **self.header)
+        response = self.client.get(f'{url}?format=api', **self.header)
 
         self.assertEqual(response.status_code, 200)
 
@@ -246,10 +246,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             '192.0.2.12/30',
         ]
         for i in range(4):
-            data = {
-                'prefix_length': 30,
-                'description': 'Test Prefix {}'.format(i + 1)
-            }
+            data = {'prefix_length': 30, 'description': f'Test Prefix {i + 1}'}
             response = self.client.post(url, data, format='json', **self.header)
             self.assertHttpStatus(response, status.HTTP_201_CREATED)
             self.assertEqual(response.data['prefix'], prefixes_to_be_created[i])
@@ -328,9 +325,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
 
         # Create all four available IPs with individual requests
         for i in range(1, 5):
-            data = {
-                'description': 'Test IP {}'.format(i)
-            }
+            data = {'description': f'Test IP {i}'}
             response = self.client.post(url, data, format='json', **self.header)
             self.assertHttpStatus(response, status.HTTP_201_CREATED)
             self.assertEqual(response.data['vrf']['id'], vrf.pk)
@@ -357,7 +352,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         self.assertIn('detail', response.data)
 
         # Create all eight available IPs in a single request
-        data = [{'description': 'Test IP {}'.format(i)} for i in range(1, 9)]  # 8 IPs
+        data = [{'description': f'Test IP {i}'} for i in range(1, 9)]
         response = self.client.post(url, data, format='json', **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
         self.assertEqual(len(response.data), 8)

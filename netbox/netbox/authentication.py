@@ -178,9 +178,7 @@ class RemoteUserBackend(_RemoteUserBackend):
         logger.debug(f"Superuser Groups: {superuser_groups}")
         superusers = settings.REMOTE_AUTH_SUPERUSERS
         logger.debug(f"Superuser Users: {superusers}")
-        user_groups = set()
-        for g in user.groups.all():
-            user_groups.add(g.name)
+        user_groups = {g.name for g in user.groups.all()}
         logger.debug(f"User {user.username} is in Groups:{user_groups}")
 
         result = user.username in superusers or (
@@ -194,9 +192,7 @@ class RemoteUserBackend(_RemoteUserBackend):
         logger.debug(f"Superuser Groups: {staff_groups}")
         staff_users = settings.REMOTE_AUTH_STAFF_USERS
         logger.debug(f"Staff Users :{staff_users}")
-        user_groups = set()
-        for g in user.groups.all():
-            user_groups.add(g.name)
+        user_groups = {g.name for g in user.groups.all()}
         logger.debug(f"User {user.username} is in Groups:{user_groups}")
         result = user.username in staff_users or (
             set(user_groups) & set(staff_groups))

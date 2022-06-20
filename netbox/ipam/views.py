@@ -406,7 +406,8 @@ class PrefixPrefixesView(generic.ObjectView):
             table.columns.show('pk')
         paginate_table(table, request)
 
-        bulk_querystring = 'vrf_id={}&within={}'.format(instance.vrf.pk if instance.vrf else '0', instance.prefix)
+        bulk_querystring = f"vrf_id={instance.vrf.pk if instance.vrf else '0'}&within={instance.prefix}"
+
 
         # Compile permissions list for rendering the object table
         permissions = {
@@ -437,7 +438,8 @@ class PrefixIPRangesView(generic.ObjectView):
             table.columns.show('pk')
         paginate_table(table, request)
 
-        bulk_querystring = 'vrf_id={}&parent={}'.format(instance.vrf.pk if instance.vrf else '0', instance.prefix)
+        bulk_querystring = f"vrf_id={instance.vrf.pk if instance.vrf else '0'}&parent={instance.prefix}"
+
 
         # Compile permissions list for rendering the object table
         permissions = {
@@ -472,7 +474,8 @@ class PrefixIPAddressesView(generic.ObjectView):
             table.columns.show('pk')
         paginate_table(table, request)
 
-        bulk_querystring = 'vrf_id={}&parent={}'.format(instance.vrf.pk if instance.vrf else '0', instance.prefix)
+        bulk_querystring = f"vrf_id={instance.vrf.pk if instance.vrf else '0'}&parent={instance.prefix}"
+
 
         # Compile permissions list for rendering the object table
         permissions = {

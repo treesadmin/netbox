@@ -41,17 +41,16 @@ class BaseTable(tables.Table):
         if self.empty_text is None:
             self.empty_text = f"No {self._meta.model._meta.verbose_name_plural} found"
 
-        # Hide non-default columns
-        default_columns = getattr(self.Meta, 'default_columns', list())
-        if default_columns:
+        if default_columns := getattr(self.Meta, 'default_columns', list()):
             for column in self.columns:
                 if column.name not in default_columns:
                     self.columns.hide(column.name)
 
         # Apply custom column ordering for user
         if user is not None and not isinstance(user, AnonymousUser):
-            columns = user.config.get(f"tables.{self.__class__.__name__}.columns")
-            if columns:
+            if columns := user.config.get(
+                f"tables.{self.__class__.__name__}.columns"
+            ):
                 pk = self.base_columns.pop('pk', None)
                 actions = self.base_columns.pop('actions', None)
 
@@ -97,11 +96,11 @@ class BaseTable(tables.Table):
             self.data.data = self.data.data.prefetch_related(None).prefetch_related(*prefetch_fields)
 
     def _get_columns(self, visible=True):
-        columns = []
-        for name, column in self.columns.items():
-            if column.visible == visible and name not in ['pk', 'actions']:
-                columns.append((name, column.verbose_name))
-        return columns
+        return [
+            (name, column.verbose_name)
+            for name, column in self.columns.items()
+            if column.visible == visible and name not in ['pk', 'actions']
+        ]
 
     @property
     def available_columns(self):
@@ -237,14 +236,10 @@ class ContentTypeColumn(tables.Column):
     Display a ContentType instance.
     """
     def render(self, value):
-        if value is None:
-            return None
-        return content_type_name(value)
+        return None if value is None else content_type_name(value)
 
     def value(self, value):
-        if value is None:
-            return None
-        return f"{value.app_label}.{value.model}"
+        return None if value is None else f"{value.app_label}.{value.model}"
 
 
 class ContentTypesColumn(tables.ManyToManyColumn):
@@ -355,7 +350,7 @@ class CustomFieldColumn(tables.Column):
 
     def render(self, value):
         if isinstance(value, list):
-            return ', '.join(v for v in value)
+            return ', '.join(value)
         elif self.customfield.type == CustomFieldTypeChoices.TYPE_URL:
             # Linkify custom URLs
             return mark_safe(f'<a href="{value}">{value}</a>')

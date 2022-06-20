@@ -27,7 +27,7 @@ def get_report(module_name, report_name):
     """
     Return a specific report from within a module.
     """
-    file_path = '{}/{}.py'.format(settings.REPORTS_ROOT, module_name)
+    file_path = f'{settings.REPORTS_ROOT}/{module_name}.py'
 
     spec = importlib.util.spec_from_file_location(module_name, file_path)
     module = importlib.util.module_from_spec(spec)
@@ -166,7 +166,7 @@ class Report(object):
         Log a message from a test method. Do not call this method directly; use one of the log_* wrappers below.
         """
         if level not in LogLevelChoices.as_dict():
-            raise Exception("Unknown logging level: {}".format(level))
+            raise Exception(f"Unknown logging level: {level}")
         self._results[self.active_test]['log'].append((
             timezone.now().isoformat(),
             level,
@@ -220,7 +220,7 @@ class Report(object):
         """
         Run the report and save its results. Each test method will be executed in order.
         """
-        self.logger.info(f"Running report")
+        self.logger.info("Running report")
         job_result.status = JobResultStatusChoices.STATUS_RUNNING
         job_result.save()
 

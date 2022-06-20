@@ -12,10 +12,10 @@ def is_taggable(obj):
     """
     Return True if the instance can have Tags assigned to it; False otherwise.
     """
-    if hasattr(obj, 'tags'):
-        if issubclass(obj.tags.__class__, _TaggableManager):
-            return True
-    return False
+    return bool(
+        hasattr(obj, 'tags')
+        and issubclass(obj.tags.__class__, _TaggableManager)
+    )
 
 
 def image_upload(instance, filename):
@@ -31,7 +31,7 @@ def image_upload(instance, filename):
     elif instance.name:
         filename = instance.name
 
-    return '{}{}_{}_{}'.format(path, instance.content_type.name, instance.object_id, filename)
+    return f'{path}{instance.content_type.name}_{instance.object_id}_{filename}'
 
 
 @deconstructible
@@ -68,10 +68,9 @@ def extras_features(*features):
                 f: collections.defaultdict(list) for f in EXTRAS_FEATURES
             }
         for feature in features:
-            if feature in EXTRAS_FEATURES:
-                app_label, model_name = model_class._meta.label_lower.split('.')
-                registry['model_features'][feature][app_label].append(model_name)
-            else:
-                raise ValueError('{} is not a valid extras feature!'.format(feature))
+            if feature not in EXTRAS_FEATURES:
+                raise ValueError(f'{feature} is not a valid extras feature!')
+            app_label, model_name = model_class._meta.label_lower.split('.')
+            registry['model_features'][feature][app_label].append(model_name)
         return model_class
     return wrapper

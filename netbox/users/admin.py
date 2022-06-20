@@ -92,9 +92,7 @@ class UserAdmin(UserAdmin_):
     list_filter = ('is_active', 'is_staff', 'is_superuser', 'groups__name')
 
     def get_inlines(self, request, obj):
-        if obj is not None:
-            return (UserObjectPermissionInline, UserConfigInline)
-        return ()
+        return () if obj is None else (UserObjectPermissionInline, UserConfigInline)
 
 
 #
@@ -177,7 +175,7 @@ class ObjectPermissionForm(forms.ModelForm):
 
         # Append any of the selected CRUD checkboxes to the actions list
         if not self.cleaned_data.get('actions'):
-            self.cleaned_data['actions'] = list()
+            self.cleaned_data['actions'] = []
         for action in ['view', 'add', 'change', 'delete']:
             if self.cleaned_data[f'can_{action}'] and action not in self.cleaned_data['actions']:
                 self.cleaned_data['actions'].append(action)

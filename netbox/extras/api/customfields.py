@@ -21,15 +21,10 @@ class CustomFieldDefaultValues:
         content_type = ContentType.objects.get_for_model(self.model)
         fields = CustomField.objects.filter(content_types=content_type)
 
-        # Populate the default value for each CustomField
-        value = {}
-        for field in fields:
-            if field.default is not None:
-                value[field.name] = field.default
-            else:
-                value[field.name] = None
-
-        return value
+        return {
+            field.name: field.default if field.default is not None else None
+            for field in fields
+        }
 
 
 class CustomFieldsDataField(Field):

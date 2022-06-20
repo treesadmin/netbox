@@ -22,12 +22,9 @@ class WebhookHandler(BaseHTTPRequestHandler):
     def log_message(self, format_str, *args):
         global request_counter
 
-        print("[{}] {} {} {}".format(
-            request_counter,
-            self.date_time_string(),
-            self.address_string(),
-            format_str % args
-        ))
+        print(
+            f"[{request_counter}] {self.date_time_string()} {self.address_string()} {format_str % args}"
+        )
 
     def do_ANY(self):
         global request_counter
@@ -66,9 +63,12 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
-            '--port', type=int, default=self.default_port,
-            help="Optional port number (default: {})".format(self.default_port)
+            '--port',
+            type=int,
+            default=self.default_port,
+            help=f"Optional port number (default: {self.default_port})",
         )
+
         parser.add_argument(
             "--no-headers", action='store_true', dest='no_headers',
             help="Hide HTTP request headers"
@@ -80,7 +80,10 @@ class Command(BaseCommand):
 
         WebhookHandler.show_headers = not options['no_headers']
 
-        self.stdout.write('Listening on port http://localhost:{}. Stop with {}.'.format(port, quit_command))
+        self.stdout.write(
+            f'Listening on port http://localhost:{port}. Stop with {quit_command}.'
+        )
+
         httpd = HTTPServer(('localhost', port), WebhookHandler)
 
         try:

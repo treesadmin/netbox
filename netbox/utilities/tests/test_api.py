@@ -151,7 +151,7 @@ class APIPaginationTestCase(APITestCase):
 
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data['count'], 100)
-        self.assertTrue(response.data['next'].endswith(f'?limit=10&offset=10'))
+        self.assertTrue(response.data['next'].endswith('?limit=10&offset=10'))
         self.assertIsNone(response.data['previous'])
         self.assertEqual(len(response.data['results']), 10)
 
@@ -161,7 +161,7 @@ class APIPaginationTestCase(APITestCase):
 
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data['count'], 100)
-        self.assertTrue(response.data['next'].endswith(f'?limit=20&offset=20'))
+        self.assertTrue(response.data['next'].endswith('?limit=20&offset=20'))
         self.assertIsNone(response.data['previous'])
         self.assertEqual(len(response.data['results']), 20)
 
@@ -195,5 +195,5 @@ class APIDocsTestCase(TestCase):
             "format": "openapi",
         }
 
-        response = self.client.get('{}?{}'.format(url, urllib.parse.urlencode(params)))
+        response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
         self.assertEqual(response.status_code, 200)

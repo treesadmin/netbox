@@ -48,17 +48,15 @@ class NetBoxSwaggerAutoSchema(SwaggerAutoSchema):
 
         if properties:
             if type(serializer) not in self.writable_serializers:
-                writable_name = 'Writable' + type(serializer).__name__
-                meta_class = getattr(type(serializer), 'Meta', None)
-                if meta_class:
-                    ref_name = 'Writable' + get_serializer_ref_name(serializer)
+                writable_name = f'Writable{type(serializer).__name__}'
+                if meta_class := getattr(type(serializer), 'Meta', None):
+                    ref_name = f'Writable{get_serializer_ref_name(serializer)}'
                     writable_meta = type('Meta', (meta_class,), {'ref_name': ref_name})
                     properties['Meta'] = writable_meta
 
                 self.writable_serializers[type(serializer)] = type(writable_name, (type(serializer),), properties)
 
-            writable_class = self.writable_serializers[type(serializer)]
-            return writable_class
+            return self.writable_serializers[type(serializer)]
 
 
 class SerializedPKRelatedFieldInspector(FieldInspector):
@@ -97,12 +95,17 @@ class ChoiceFieldInspector(FieldInspector):
                 # Change value_schema for IPAddressFamilyChoices, RackWidthChoices
                 value_schema = openapi.Schema(type=openapi.TYPE_INTEGER, enum=choice_value)
 
-            schema = SwaggerType(type=openapi.TYPE_OBJECT, required=["label", "value"], properties={
-                "label": openapi.Schema(type=openapi.TYPE_STRING, enum=choice_label),
-                "value": value_schema
-            })
+            return SwaggerType(
+                type=openapi.TYPE_OBJECT,
+                required=["label", "value"],
+                properties={
+                    "label": openapi.Schema(
+                        type=openapi.TYPE_STRING, enum=choice_label
+                    ),
+                    "value": value_schema,
+                },
+            )
 
-            return schema
 
         return NotHandled
 

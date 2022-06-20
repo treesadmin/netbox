@@ -131,7 +131,7 @@ class CustomField(ChangeLoggedModel):
         """
         for ct in content_types:
             model = ct.model_class()
-            instances = model.objects.exclude(**{f'custom_field_data__contains': self.name})
+            instances = model.objects.exclude(**{'custom_field_data__contains': self.name})
             for instance in instances:
                 instance.custom_field_data[self.name] = self.default
             model.objects.bulk_update(instances, ['custom_field_data'], batch_size=100)
@@ -300,7 +300,7 @@ class CustomField(ChangeLoggedModel):
             # Validate text field
             if self.type == CustomFieldTypeChoices.TYPE_TEXT:
                 if type(value) is not str:
-                    raise ValidationError(f"Value must be a string.")
+                    raise ValidationError("Value must be a string.")
                 if self.validation_regex and not re.match(self.validation_regex, value):
                     raise ValidationError(f"Value must match regex '{self.validation_regex}'")
 
@@ -318,26 +318,31 @@ class CustomField(ChangeLoggedModel):
                 raise ValidationError("Value must be true or false.")
 
             # Validate date
-            if self.type == CustomFieldTypeChoices.TYPE_DATE:
-                if type(value) is not date:
-                    try:
-                        datetime.strptime(value, '%Y-%m-%d')
-                    except ValueError:
-                        raise ValidationError("Date values must be in the format YYYY-MM-DD.")
+            if (
+                self.type == CustomFieldTypeChoices.TYPE_DATE
+                and type(value) is not date
+            ):
+                try:
+                    datetime.strptime(value, '%Y-%m-%d')
+                except ValueError:
+                    raise ValidationError("Date values must be in the format YYYY-MM-DD.")
 
             # Validate selected choice
-            if self.type == CustomFieldTypeChoices.TYPE_SELECT:
-                if value not in self.choices:
-                    raise ValidationError(
-                        f"Invalid choice ({value}). Available choices are: {', '.join(self.choices)}"
-                    )
+            if (
+                self.type == CustomFieldTypeChoices.TYPE_SELECT
+                and value not in self.choices
+            ):
+                raise ValidationError(
+                    f"Invalid choice ({value}). Available choices are: {', '.join(self.choices)}"
+                )
 
             # Validate all selected choices
-            if self.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
-                if not set(value).issubset(self.choices):
-                    raise ValidationError(
-                        f"Invalid choice(s) ({', '.join(value)}). Available choices are: {', '.join(self.choices)}"
-                    )
+            if self.type == CustomFieldTypeChoices.TYPE_MULTISELECT and not set(
+                value
+            ).issubset(self.choices):
+                raise ValidationError(
+                    f"Invalid choice(s) ({', '.join(value)}). Available choices are: {', '.join(self.choices)}"
+                )
 
         elif self.required:
             raise ValidationError("Required field cannot be empty.")

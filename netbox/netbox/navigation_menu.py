@@ -355,15 +355,11 @@ MENUS = [
 #
 
 if registry['plugin_menu_items']:
-    plugin_menu_groups = []
+    plugin_menu_groups = [
+        MenuGroup(label=plugin_name, items=items)
+        for plugin_name, items in registry['plugin_menu_items'].items()
+    ]
 
-    for plugin_name, items in registry['plugin_menu_items'].items():
-        plugin_menu_groups.append(
-            MenuGroup(
-                label=plugin_name,
-                items=items
-            )
-        )
 
     PLUGIN_MENU = Menu(
         label="Plugins",

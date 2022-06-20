@@ -11,7 +11,7 @@ class Empty(Lookup):
         lhs, lhs_params = self.process_lhs(qn, connection)
         rhs, rhs_params = self.process_rhs(qn, connection)
         params = lhs_params + rhs_params
-        return 'CAST(LENGTH(%s) AS BOOLEAN) != %s' % (lhs, rhs), params
+        return f'CAST(LENGTH({lhs}) AS BOOLEAN) != {rhs}', params
 
 
 CharField.register_lookup(Empty)

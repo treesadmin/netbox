@@ -52,10 +52,11 @@ class Command(BaseCommand):
             # Find *all* models with NaturalOrderingFields
             for app_config in apps.get_app_configs():
                 for model in app_config.models.values():
-                    fields = [
-                        field for field in model._meta.concrete_fields if type(field) is NaturalOrderingField
-                    ]
-                    if fields:
+                    if fields := [
+                        field
+                        for field in model._meta.concrete_fields
+                        if type(field) is NaturalOrderingField
+                    ]:
                         models.append(
                             (model, fields)
                         )

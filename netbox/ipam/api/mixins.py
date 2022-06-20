@@ -48,12 +48,12 @@ class AvailablePrefixesMixin:
 
             requested_prefixes = serializer.validated_data
             # Allocate prefixes to the requested objects based on availability within the parent
-            for i, requested_prefix in enumerate(requested_prefixes):
-
+            for requested_prefix in requested_prefixes:
                 # Find the first available prefix equal to or larger than the requested size
                 for available_prefix in available_prefixes.iter_cidrs():
                     if requested_prefix['prefix_length'] >= available_prefix.prefixlen:
-                        allocated_prefix = '{}/{}'.format(available_prefix.network, requested_prefix['prefix_length'])
+                        allocated_prefix = f"{available_prefix.network}/{requested_prefix['prefix_length']}"
+
                         requested_prefix['prefix'] = allocated_prefix
                         requested_prefix['vrf'] = prefix.vrf.pk if prefix.vrf else None
                         break

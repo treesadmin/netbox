@@ -1065,9 +1065,7 @@ class IPAddressForm(BootstrapMixin, TenancyForm, CustomFieldModelForm):
     def save(self, *args, **kwargs):
         ipaddress = super().save(*args, **kwargs)
 
-        # Assign/clear this IPAddress as the primary for the associated Device/VirtualMachine.
-        interface = self.instance.assigned_object
-        if interface:
+        if interface := self.instance.assigned_object:
             parent = interface.parent_object
             if self.cleaned_data['primary_for_parent']:
                 if ipaddress.address.version == 4:

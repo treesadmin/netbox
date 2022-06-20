@@ -68,14 +68,16 @@ class ProviderFilterSet(PrimaryModelFilterSet):
         fields = ['id', 'name', 'slug', 'asn', 'account']
 
     def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(
-            Q(name__icontains=value) |
-            Q(account__icontains=value) |
-            Q(noc_contact__icontains=value) |
-            Q(admin_contact__icontains=value) |
-            Q(comments__icontains=value)
+        return (
+            queryset.filter(
+                Q(name__icontains=value)
+                | Q(account__icontains=value)
+                | Q(noc_contact__icontains=value)
+                | Q(admin_contact__icontains=value)
+                | Q(comments__icontains=value)
+            )
+            if value.strip()
+            else queryset
         )
 
 
@@ -101,13 +103,15 @@ class ProviderNetworkFilterSet(PrimaryModelFilterSet):
         fields = ['id', 'name']
 
     def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(
-            Q(name__icontains=value) |
-            Q(description__icontains=value) |
-            Q(comments__icontains=value)
-        ).distinct()
+        return (
+            queryset.filter(
+                Q(name__icontains=value)
+                | Q(description__icontains=value)
+                | Q(comments__icontains=value)
+            ).distinct()
+            if value.strip()
+            else queryset
+        )
 
 
 class CircuitTypeFilterSet(OrganizationalModelFilterSet):
@@ -195,16 +199,18 @@ class CircuitFilterSet(PrimaryModelFilterSet, TenancyFilterSet):
         fields = ['id', 'cid', 'install_date', 'commit_rate']
 
     def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(
-            Q(cid__icontains=value) |
-            Q(terminations__xconnect_id__icontains=value) |
-            Q(terminations__pp_info__icontains=value) |
-            Q(terminations__description__icontains=value) |
-            Q(description__icontains=value) |
-            Q(comments__icontains=value)
-        ).distinct()
+        return (
+            queryset.filter(
+                Q(cid__icontains=value)
+                | Q(terminations__xconnect_id__icontains=value)
+                | Q(terminations__pp_info__icontains=value)
+                | Q(terminations__description__icontains=value)
+                | Q(description__icontains=value)
+                | Q(comments__icontains=value)
+            ).distinct()
+            if value.strip()
+            else queryset
+        )
 
 
 class CircuitTerminationFilterSet(ChangeLoggedModelFilterSet, CableTerminationFilterSet):
@@ -236,11 +242,13 @@ class CircuitTerminationFilterSet(ChangeLoggedModelFilterSet, CableTerminationFi
         fields = ['id', 'term_side', 'port_speed', 'upstream_speed', 'xconnect_id']
 
     def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(
-            Q(circuit__cid__icontains=value) |
-            Q(xconnect_id__icontains=value) |
-            Q(pp_info__icontains=value) |
-            Q(description__icontains=value)
-        ).distinct()
+        return (
+            queryset.filter(
+                Q(circuit__cid__icontains=value)
+                | Q(xconnect_id__icontains=value)
+                | Q(pp_info__icontains=value)
+                | Q(description__icontains=value)
+            ).distinct()
+            if value.strip()
+            else queryset
+        )

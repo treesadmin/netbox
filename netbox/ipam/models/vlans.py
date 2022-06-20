@@ -83,10 +83,7 @@ class VLANGroup(OrganizationalModel):
         Return the first available VLAN ID (1-4094) in the group.
         """
         vlan_ids = VLAN.objects.filter(group=self).values_list('vid', flat=True)
-        for i in range(1, 4095):
-            if i not in vlan_ids:
-                return i
-        return None
+        return next((i for i in range(1, 4095) if i not in vlan_ids), None)
 
 
 @extras_features('custom_fields', 'custom_links', 'export_templates', 'tags', 'webhooks')

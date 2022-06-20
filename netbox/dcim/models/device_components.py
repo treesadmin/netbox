@@ -69,9 +69,7 @@ class ComponentModel(PrimaryModel):
         abstract = True
 
     def __str__(self):
-        if self.label:
-            return f"{self.name} ({self.label})"
-        return self.name
+        return f"{self.name} ({self.label})" if self.label else self.name
 
     def to_objectchange(self, action):
         # Annotate the parent Device
@@ -318,61 +316,63 @@ class PowerPort(ComponentModel, CableTermination, PathEndpoint):
     def clean(self):
         super().clean()
 
-        if self.maximum_draw is not None and self.allocated_draw is not None:
-            if self.allocated_draw > self.maximum_draw:
-                raise ValidationError({
-                    'allocated_draw': f"Allocated draw cannot exceed the maximum draw ({self.maximum_draw}W)."
-                })
+        if (
+            self.maximum_draw is not None
+            and self.allocated_draw is not None
+            and self.allocated_draw > self.maximum_draw
+        ):
+            raise ValidationError({
+                'allocated_draw': f"Allocated draw cannot exceed the maximum draw ({self.maximum_draw}W)."
+            })
 
     def get_power_draw(self):
         """
         Return the allocated and maximum power draw (in VA) and child PowerOutlet count for this PowerPort.
         """
         # Calculate aggregate draw of all child power outlets if no numbers have been defined manually
-        if self.allocated_draw is None and self.maximum_draw is None:
-            poweroutlet_ct = ContentType.objects.get_for_model(PowerOutlet)
-            outlet_ids = PowerOutlet.objects.filter(power_port=self).values_list('pk', flat=True)
-            utilization = PowerPort.objects.filter(
-                _cable_peer_type=poweroutlet_ct,
-                _cable_peer_id__in=outlet_ids
-            ).aggregate(
-                maximum_draw_total=Sum('maximum_draw'),
-                allocated_draw_total=Sum('allocated_draw'),
-            )
-            ret = {
-                'allocated': utilization['allocated_draw_total'] or 0,
-                'maximum': utilization['maximum_draw_total'] or 0,
-                'outlet_count': len(outlet_ids),
+        if self.allocated_draw is not None or self.maximum_draw is not None:
+            # Default to administratively defined values
+            return {
+                'allocated': self.allocated_draw or 0,
+                'maximum': self.maximum_draw or 0,
+                'outlet_count': PowerOutlet.objects.filter(power_port=self).count(),
                 'legs': [],
             }
-
-            # Calculate per-leg aggregates for three-phase feeds
-            if getattr(self._cable_peer, 'phase', None) == PowerFeedPhaseChoices.PHASE_3PHASE:
-                for leg, leg_name in PowerOutletFeedLegChoices:
-                    outlet_ids = PowerOutlet.objects.filter(power_port=self, feed_leg=leg).values_list('pk', flat=True)
-                    utilization = PowerPort.objects.filter(
-                        _cable_peer_type=poweroutlet_ct,
-                        _cable_peer_id__in=outlet_ids
-                    ).aggregate(
-                        maximum_draw_total=Sum('maximum_draw'),
-                        allocated_draw_total=Sum('allocated_draw'),
-                    )
-                    ret['legs'].append({
-                        'name': leg_name,
-                        'allocated': utilization['allocated_draw_total'] or 0,
-                        'maximum': utilization['maximum_draw_total'] or 0,
-                        'outlet_count': len(outlet_ids),
-                    })
-
-            return ret
-
-        # Default to administratively defined values
-        return {
-            'allocated': self.allocated_draw or 0,
-            'maximum': self.maximum_draw or 0,
-            'outlet_count': PowerOutlet.objects.filter(power_port=self).count(),
+        poweroutlet_ct = ContentType.objects.get_for_model(PowerOutlet)
+        outlet_ids = PowerOutlet.objects.filter(power_port=self).values_list('pk', flat=True)
+        utilization = PowerPort.objects.filter(
+            _cable_peer_type=poweroutlet_ct,
+            _cable_peer_id__in=outlet_ids
+        ).aggregate(
+            maximum_draw_total=Sum('maximum_draw'),
+            allocated_draw_total=Sum('allocated_draw'),
+        )
+        ret = {
+            'allocated': utilization['allocated_draw_total'] or 0,
+            'maximum': utilization['maximum_draw_total'] or 0,
+            'outlet_count': len(outlet_ids),
             'legs': [],
         }
+
+        # Calculate per-leg aggregates for three-phase feeds
+        if getattr(self._cable_peer, 'phase', None) == PowerFeedPhaseChoices.PHASE_3PHASE:
+            for leg, leg_name in PowerOutletFeedLegChoices:
+                outlet_ids = PowerOutlet.objects.filter(power_port=self, feed_leg=leg).values_list('pk', flat=True)
+                utilization = PowerPort.objects.filter(
+                    _cable_peer_type=poweroutlet_ct,
+                    _cable_peer_id__in=outlet_ids
+                ).aggregate(
+                    maximum_draw_total=Sum('maximum_draw'),
+                    allocated_draw_total=Sum('allocated_draw'),
+                )
+                ret['legs'].append({
+                    'name': leg_name,
+                    'allocated': utilization['allocated_draw_total'] or 0,
+                    'maximum': utilization['maximum_draw_total'] or 0,
+                    'outlet_count': len(outlet_ids),
+                })
+
+        return ret
 
 
 #
@@ -419,7 +419,7 @@ class PowerOutlet(ComponentModel, CableTermination, PathEndpoint):
         # Validate power port assignment
         if self.power_port and self.power_port.device != self.device:
             raise ValidationError(
-                "Parent power port ({}) must belong to the same device".format(self.power_port)
+                f"Parent power port ({self.power_port}) must belong to the same device"
             )
 
 
@@ -599,10 +599,11 @@ class Interface(ComponentModel, BaseInterface, CableTermination, PathEndpoint):
 
         # Validate untagged VLAN
         if self.untagged_vlan and self.untagged_vlan.site not in [self.device.site, None]:
-            raise ValidationError({
-                'untagged_vlan': "The untagged VLAN ({}) must belong to the same site as the interface's parent "
-                                 "device, or it must be global".format(self.untagged_vlan)
-            })
+            raise ValidationError(
+                {
+                    'untagged_vlan': f"The untagged VLAN ({self.untagged_vlan}) must belong to the same site as the interface's parent device, or it must be global"
+                }
+            )
 
     @property
     def is_connectable(self):
@@ -750,9 +751,10 @@ class DeviceBay(ComponentModel):
 
         # Validate that the parent Device can have DeviceBays
         if not self.device.device_type.is_parent_device:
-            raise ValidationError("This type of device ({}) does not support device bays.".format(
-                self.device.device_type
-            ))
+            raise ValidationError(
+                f"This type of device ({self.device.device_type}) does not support device bays."
+            )
+
 
         # Cannot install a device into itself, obviously
         if self.device == self.installed_device:
@@ -762,11 +764,11 @@ class DeviceBay(ComponentModel):
         if self.installed_device:
             current_bay = DeviceBay.objects.filter(installed_device=self.installed_device).first()
             if current_bay and current_bay != self:
-                raise ValidationError({
-                    'installed_device': "Cannot install the specified device; device is already installed in {}".format(
-                        current_bay
-                    )
-                })
+                raise ValidationError(
+                    {
+                        'installed_device': f"Cannot install the specified device; device is already installed in {current_bay}"
+                    }
+                )
 
 
 #

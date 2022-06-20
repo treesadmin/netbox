@@ -249,7 +249,11 @@ class CircuitSwapTerminations(generic.ObjectEditView):
 
         # Circuit must have at least one termination to swap
         if not circuit.termination_a and not circuit.termination_z:
-            messages.error(request, "No terminations have been defined for circuit {}.".format(circuit))
+            messages.error(
+                request,
+                f"No terminations have been defined for circuit {circuit}.",
+            )
+
             return redirect('circuits:circuit', pk=circuit.pk)
 
         return render(request, 'circuits/circuit_terminations_swap.html', {

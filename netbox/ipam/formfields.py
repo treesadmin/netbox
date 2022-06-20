@@ -28,7 +28,7 @@ class IPAddressFormField(forms.Field):
             try:
                 validate_ipv6_address(value)
             except ValidationError:
-                raise ValidationError("Invalid IPv4/IPv6 address format: {}".format(value))
+                raise ValidationError(f"Invalid IPv4/IPv6 address format: {value}")
 
         try:
             return IPAddress(value)

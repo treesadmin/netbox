@@ -159,9 +159,10 @@ class Cable(PrimaryModel):
         try:
             self.termination_a_type.model_class().objects.get(pk=self.termination_a_id)
         except ObjectDoesNotExist:
-            raise ValidationError({
-                'termination_a': 'Invalid ID for type {}'.format(self.termination_a_type)
-            })
+            raise ValidationError(
+                {'termination_a': f'Invalid ID for type {self.termination_a_type}'}
+            )
+
 
         # Validate that termination B exists
         if not hasattr(self, 'termination_b_type'):
@@ -169,9 +170,10 @@ class Cable(PrimaryModel):
         try:
             self.termination_b_type.model_class().objects.get(pk=self.termination_b_id)
         except ObjectDoesNotExist:
-            raise ValidationError({
-                'termination_b': 'Invalid ID for type {}'.format(self.termination_b_type)
-            })
+            raise ValidationError(
+                {'termination_b': f'Invalid ID for type {self.termination_b_type}'}
+            )
+
 
         # If editing an existing Cable instance, check that neither termination has been modified.
         if self.pk:
@@ -196,17 +198,19 @@ class Cable(PrimaryModel):
 
         # Validate interface types
         if type_a == 'interface' and self.termination_a.type in NONCONNECTABLE_IFACE_TYPES:
-            raise ValidationError({
-                'termination_a_id': 'Cables cannot be terminated to {} interfaces'.format(
-                    self.termination_a.get_type_display()
-                )
-            })
+            raise ValidationError(
+                {
+                    'termination_a_id': f'Cables cannot be terminated to {self.termination_a.get_type_display()} interfaces'
+                }
+            )
+
         if type_b == 'interface' and self.termination_b.type in NONCONNECTABLE_IFACE_TYPES:
-            raise ValidationError({
-                'termination_b_id': 'Cables cannot be terminated to {} interfaces'.format(
-                    self.termination_b.get_type_display()
-                )
-            })
+            raise ValidationError(
+                {
+                    'termination_b_id': f'Cables cannot be terminated to {self.termination_b.get_type_display()} interfaces'
+                }
+            )
+
 
         # Check that termination types are compatible
         if type_b not in COMPATIBLE_TERMINATION_TYPES.get(type_a):
@@ -215,14 +219,18 @@ class Cable(PrimaryModel):
             )
 
         # Check that two connected RearPorts have the same number of positions (if both are >1)
-        if isinstance(self.termination_a, RearPort) and isinstance(self.termination_b, RearPort):
-            if self.termination_a.positions > 1 and self.termination_b.positions > 1:
-                if self.termination_a.positions != self.termination_b.positions:
-                    raise ValidationError(
-                        f"{self.termination_a} has {self.termination_a.positions} position(s) but "
-                        f"{self.termination_b} has {self.termination_b.positions}. "
-                        f"Both terminations must have the same number of positions (if greater than one)."
-                    )
+        if (
+            isinstance(self.termination_a, RearPort)
+            and isinstance(self.termination_b, RearPort)
+            and self.termination_a.positions > 1
+            and self.termination_b.positions > 1
+            and self.termination_a.positions != self.termination_b.positions
+        ):
+            raise ValidationError(
+                f"{self.termination_a} has {self.termination_a.positions} position(s) but "
+                f"{self.termination_b} has {self.termination_b.positions}. "
+                f"Both terminations must have the same number of positions (if greater than one)."
+            )
 
         # A termination point cannot be connected to itself
         if self.termination_a == self.termination_b:
@@ -251,13 +259,15 @@ class Cable(PrimaryModel):
 
         # Check for an existing Cable connected to either termination object
         if self.termination_a.cable not in (None, self):
-            raise ValidationError("{} already has a cable attached (#{})".format(
-                self.termination_a, self.termination_a.cable_id
-            ))
+            raise ValidationError(
+                f"{self.termination_a} already has a cable attached (#{self.termination_a.cable_id})"
+            )
+
         if self.termination_b.cable not in (None, self):
-            raise ValidationError("{} already has a cable attached (#{})".format(
-                self.termination_b, self.termination_b.cable_id
-            ))
+            raise ValidationError(
+                f"{self.termination_b} already has a cable attached (#{self.termination_b.cable_id})"
+            )
+
 
         # Validate length and length_unit
         if self.length is not None and not self.length_unit:
@@ -405,7 +415,6 @@ class CablePath(BigIDModel):
                     position_stack.append(peer_termination.rear_port_position)
                 path.append(object_to_path_node(node))
 
-            # Follow a RearPort to its corresponding FrontPort (if any)
             elif isinstance(peer_termination, RearPort):
                 path.append(object_to_path_node(peer_termination))
 
@@ -426,24 +435,21 @@ class CablePath(BigIDModel):
                     # No corresponding FrontPort found for the RearPort
                     break
 
-            # Follow a CircuitTermination to its corresponding CircuitTermination (A to Z or vice versa)
             elif isinstance(peer_termination, CircuitTermination):
                 path.append(object_to_path_node(peer_termination))
                 # Get peer CircuitTermination
                 node = peer_termination.get_peer_termination()
-                if node:
-                    path.append(object_to_path_node(node))
-                    if node.provider_network:
-                        destination = node.provider_network
-                        break
-                    elif node.site and not node.cable:
-                        destination = node.site
-                        break
-                else:
+                if not node:
                     # No peer CircuitTermination exists; halt the trace
                     break
 
-            # Anything else marks the end of the path
+                path.append(object_to_path_node(node))
+                if node.provider_network:
+                    destination = node.provider_network
+                    break
+                elif node.site and not node.cable:
+                    destination = node.site
+                    break
             else:
                 destination = peer_termination
                 break

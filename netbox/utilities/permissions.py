@@ -12,11 +12,7 @@ def get_permission_for_model(model, action):
     if action not in ('view', 'add', 'change', 'delete'):
         raise ValueError(f"Unsupported action: {action}")
 
-    return '{}.{}_{}'.format(
-        model._meta.app_label,
-        action,
-        model._meta.model_name
-    )
+    return f'{model._meta.app_label}.{action}_{model._meta.model_name}'
 
 
 def resolve_permission(name):
@@ -61,14 +57,18 @@ def permission_is_exempt(name):
     """
     app_label, action, model_name = resolve_permission(name)
 
-    if action == 'view':
-        if (
+    if action == 'view' and (
+        (
             # All models (excluding those in EXEMPT_EXCLUDE_MODELS) are exempt from view permission enforcement
-            '*' in settings.EXEMPT_VIEW_PERMISSIONS and (app_label, model_name) not in settings.EXEMPT_EXCLUDE_MODELS
-        ) or (
+            '*' in settings.EXEMPT_VIEW_PERMISSIONS
+            and (app_label, model_name) not in settings.EXEMPT_EXCLUDE_MODELS
+        )
+        or (
             # This specific model is exempt from view permission enforcement
-            f'{app_label}.{model_name}' in settings.EXEMPT_VIEW_PERMISSIONS
-        ):
-            return True
+            f'{app_label}.{model_name}'
+            in settings.EXEMPT_VIEW_PERMISSIONS
+        )
+    ):
+        return True
 
     return False

@@ -57,10 +57,7 @@ def get_interface_state_attribute(record):
     """
     Get interface enabled state as string to attach to <tr/> DOM element.
     """
-    if record.enabled:
-        return "enabled"
-    else:
-        return "disabled"
+    return "enabled" if record.enabled else "disabled"
 
 #
 # Device roles

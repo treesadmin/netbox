@@ -146,7 +146,7 @@ class BaseFilterSet(django_filters.FilterSet):
 
             # Create new filters for each lookup expression in the map
             for lookup_name, lookup_expr in lookup_map.items():
-                new_filter_name = '{}__{}'.format(existing_filter_name, lookup_name)
+                new_filter_name = f'{existing_filter_name}__{lookup_name}'
 
                 try:
                     if existing_filter_name in cls.declared_filters:
@@ -214,7 +214,9 @@ class PrimaryModelFilterSet(ChangeLoggedModelFilterSet):
             filter_logic=CustomFieldFilterLogicChoices.FILTER_DISABLED
         )
         for cf in custom_fields:
-            self.filters['cf_{}'.format(cf.name)] = CustomFieldFilter(field_name=cf.name, custom_field=cf)
+            self.filters[f'cf_{cf.name}'] = CustomFieldFilter(
+                field_name=cf.name, custom_field=cf
+            )
 
 
 class OrganizationalModelFilterSet(PrimaryModelFilterSet):
@@ -227,9 +229,10 @@ class OrganizationalModelFilterSet(PrimaryModelFilterSet):
     )
 
     def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(
-            models.Q(name__icontains=value) |
-            models.Q(slug__icontains=value)
+        return (
+            queryset.filter(
+                models.Q(name__icontains=value) | models.Q(slug__icontains=value)
+            )
+            if value.strip()
+            else queryset
         )
